@@ -1,0 +1,158 @@
+// Prisma schema for OHé Diag
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ ENUMS ============
+
+enum Role {
+  SUPERADMIN
+  ADMIN
+  USER
+}
+
+enum TestStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  RESET
+}
+
+enum QuestionType {
+  PROCEDURAL
+  DECLARATIF
+}
+
+enum QuestionCategory {
+  ORTHOGRAPHE_LEXICALE
+  ORTHOGRAPHE_GRAMMATICALE
+  CONJUGAISON
+  SYNTAXE
+  PONCTUATION
+  VOCABULAIRE
+}
+
+enum Level {
+  A
+  B1
+  B2
+  C
+}
+
+enum DeclarativeAxis {
+  INTEREST
+  RELEVANCE
+}
+
+// ============ MODELS ============
+
+model Organization {
+  id                  String              @id @default(cuid())
+  name                String
+  credits             Int                 @default(0)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  users               User[]
+  creditTransactions  CreditTransaction[]
+}
+
+model User {
+  id                  String        @id @default(cuid())
+  email               String        @unique
+  passwordHash        String?
+  firstName           String?
+  lastName            String?
+  role                Role          @default(USER)
+  organizationId      String?
+  magicLinkToken      String?       @unique
+  magicLinkExpiresAt  DateTime?
+  passwordCreated     Boolean       @default(false)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  organization        Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  testSessions        TestSession[]
+
+  @@index([organizationId])
+  @@index([magicLinkToken])
+}
+
+model TestSession {
+  id                    String      @id @default(cuid())
+  userId                String
+  status                TestStatus  @default(NOT_STARTED)
+  currentQuestionIndex  Int         @default(0)
+  questionsOrder        Json
+  startedAt             DateTime?
+  completedAt           DateTime?
+  scoreProcedural       Int?
+  scoreDeclaratif       Int?
+  level                 Level?
+  quadrant              Int?
+  creditConsumed        Boolean     @default(false)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers               Answer[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Question {
+  id                  String           @id @default(cuid())
+  type                QuestionType
+  category            QuestionCategory?
+  subCategory         String?
+  questionText        String
+  options             Json
+  correctAnswerIndex  Int?
+  declarativeAxis     DeclarativeAxis?
+  declarativeWeight   Int?
+  timeLimit           Int              @default(15)
+  active              Boolean          @default(true)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  answers             Answer[]
+
+  @@index([type])
+  @@index([category])
+}
+
+model Answer {
+  id                    String      @id @default(cuid())
+  testSessionId         String
+  questionId            String
+  selectedOptionIndex   Int?
+  isCorrect             Boolean     @default(false)
+  timeSpent             Int?
+  answeredAt            DateTime    @default(now())
+
+  testSession           TestSession @relation(fields: [testSessionId], references: [id], onDelete: Cascade)
+  question              Question    @relation(fields: [questionId], references: [id], onDelete: Restrict)
+
+  @@unique([testSessionId, questionId])
+  @@index([testSessionId])
+}
+
+model CreditTransaction {
+  id              String       @id @default(cuid())
+  organizationId  String
+  amount          Int
+  reason          String
+  createdById     String?
+  createdAt       DateTime     @default(now())
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+}
