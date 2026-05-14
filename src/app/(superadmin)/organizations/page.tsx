@@ -1,46 +1,58 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import Logo from '@/components/ui/Logo';
-import Card from '@/components/ui/Card';
-import LogoutButton from '@/components/LogoutButton';
+import { prisma } from '@/lib/prisma';
+import SuperadminHeader from '@/components/superadmin/SuperadminHeader';
+import OrganizationsList from '@/components/superadmin/OrganizationsList';
 
 export default async function OrganizationsPage() {
   const session = await auth();
 
-  if (!session || session.user.role !== 'SUPERADMIN') {
+  if (!session?.user || session.user.role !== 'SUPERADMIN') {
     redirect('/login');
   }
 
+  const organizations = await prisma.organization.findMany({
+    include: {
+      users: {
+        select: { id: true, role: true },
+      },
+      _count: {
+        select: { users: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Compter les tests complétés par organisation
+  const orgsWithStats = await Promise.all(
+    organizations.map(async (org) => {
+      const completedTests = await prisma.testSession.count({
+        where: {
+          status: 'COMPLETED',
+          user: { organizationId: org.id },
+        },
+      });
+      const adminsCount = org.users.filter((u) => u.role === 'ADMIN').length;
+      const usersCount = org.users.filter((u) => u.role === 'USER').length;
+
+      return {
+        id: org.id,
+        name: org.name,
+        credits: org.credits,
+        adminsCount,
+        usersCount,
+        completedTests,
+        createdAt: org.createdAt,
+      };
+    })
+  );
+
   return (
-    <main className="min-h-screen bg-ohe-slate-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        <header className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-3">
-            <Logo size="md" />
-            <span className="px-2 py-1 bg-ohe-blue text-white text-xs font-semibold rounded">
-              SUPERADMIN
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <p className="text-sm font-medium text-ohe-slate-900">{session.user.name}</p>
-              <p className="text-xs text-ohe-slate-600">OHé Platform</p>
-            </div>
-            <LogoutButton />
-          </div>
-        </header>
-
-        <Card padding="lg">
-          <h1 className="text-2xl font-bold text-ohe-slate-900 mb-2">Organisations</h1>
-          <p className="text-ohe-slate-600 mb-6">Gestion des organisations clientes et de leurs crédits.</p>
-
-          <div className="p-4 bg-ohe-slate-50 border border-ohe-slate-200 rounded-lg">
-            <p className="text-sm text-ohe-slate-600">
-              🚧 Cette page sera construite plus tard.
-            </p>
-          </div>
-        </Card>
-      </div>
-    </main>
+    <div className="min-h-screen bg-ohe-slate-50">
+      <SuperadminHeader userName={`${session.user.name}`} activePage="organizations" />
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <OrganizationsList organizations={orgsWithStats} />
+      </main>
+    </div>
   );
 }
