@@ -65,13 +65,15 @@ export default function UserActions({
     <>
       <div className="flex items-center justify-end gap-2">
         {canDownloadPdf && (
-          <button
-            type="button"
-            onClick={handleDownloadPdf}
-            className="text-xs font-medium text-ohe-blue hover:text-ohe-blue-dark transition-colors px-2 py-1"
-          >
-            📄 Bilan PDF
-          </button>
+          <a
+  href={`/api/pdf/${userId}`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="text-xs font-medium text-ohe-blue hover:text-ohe-blue-dark transition-colors px-2 py-1"
+>
+  📄 Bilan PDF
+</a>
+
         )}
         {canReset && (
           <button
