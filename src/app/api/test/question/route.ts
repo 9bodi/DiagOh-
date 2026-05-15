@@ -5,19 +5,52 @@ import { getActiveSession } from '@/lib/test-session';
 
 export async function GET() {
   const session = await auth();
-
-  if (!session || session.user.role !== 'USER') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
-  const active = await getActiveSession(session.user.id);
-  if (!active) {
-    return NextResponse.json({ error: 'No active session' }, { status: 404 });
+  const testSession = await getActiveSession(session.user.id);
+  if (!testSession) {
+    return NextResponse.json({ error: 'Aucune session active' }, { status: 404 });
   }
 
-  const questionsOrder = active.questionsOrder as string[];
-  const currentIndex = active.currentQuestionIndex;
+  const questionsOrder = testSession.questionsOrder as string[];
+  let currentIndex = testSession.currentQuestionIndex;
+  let servedCount = testSession.currentQuestionServedCount;
 
+  // Anti-cheat : si la question courante a déjà été servie >= 2 fois → quit détecté
+  if (servedCount >= 1 && currentIndex < questionsOrder.length) {
+    const previousQuestionId = questionsOrder[currentIndex];
+
+    await prisma.answer.upsert({
+      where: {
+        testSessionId_questionId: {
+          testSessionId: testSession.id,
+          questionId: previousQuestionId,
+        },
+      },
+      update: { selectedOptionIndex: null, isCorrect: false },
+      create: {
+        testSessionId: testSession.id,
+        questionId: previousQuestionId,
+        selectedOptionIndex: null,
+        isCorrect: false,
+      },
+    });
+
+    await prisma.testSession.update({
+      where: { id: testSession.id },
+      data: {
+        currentQuestionIndex: { increment: 1 },
+        currentQuestionServedCount: 0,
+      },
+    });
+
+    currentIndex = currentIndex + 1;
+    servedCount = 0;
+  }
+
+  // Test fini ?
   if (currentIndex >= questionsOrder.length) {
     return NextResponse.json({ finished: true });
   }
@@ -25,26 +58,30 @@ export async function GET() {
   const questionId = questionsOrder[currentIndex];
   const question = await prisma.question.findUnique({
     where: { id: questionId },
-    select: {
-      id: true,
-      type: true,
-      category: true,
-      subCategory: true,
-      questionText: true,
-      options: true,
-      timeLimit: true,
-      // ⚠️ on ne renvoie PAS correctAnswerIndex au client
-    },
   });
 
   if (!question) {
-    return NextResponse.json({ error: 'Question not found' }, { status: 404 });
+    return NextResponse.json({ error: 'Question introuvable' }, { status: 404 });
   }
 
+  // Incrémenter le compteur
+  await prisma.testSession.update({
+    where: { id: testSession.id },
+    data: { currentQuestionServedCount: { increment: 1 } },
+  });
+
   return NextResponse.json({
-    sessionId: active.id,
+    sessionId: testSession.id,
     currentIndex,
     totalQuestions: questionsOrder.length,
-    question,
+    question: {
+      id: question.id,
+      type: question.type,
+      category: question.category,
+      subCategory: question.subCategory,
+      text: question.text,
+      options: question.options,
+      timeLimit: question.timeLimit,
+    },
   });
 }

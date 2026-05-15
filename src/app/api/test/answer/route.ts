@@ -1,46 +1,43 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { z } from 'zod';
 import { getActiveSession } from '@/lib/test-session';
+import { z } from 'zod';
 
-const answerSchema = z.object({
-  questionId: z.string(),
+const schema = z.object({
+  questionId: z.string().min(1),
   selectedOptionIndex: z.number().int().min(0).max(3).nullable(),
-  timeSpent: z.number().int().min(0).optional(),
+  timeSpent: z.number().int().optional(),
 });
 
 export async function POST(request: Request) {
   const session = await auth();
-  if (!session || session.user.role !== 'USER') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
   const body = await request.json();
-  const parsed = answerSchema.safeParse(body);
+  const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+    return NextResponse.json({ error: 'Données invalides' }, { status: 400 });
   }
+
   const { questionId, selectedOptionIndex, timeSpent } = parsed.data;
 
-  const active = await getActiveSession(session.user.id);
-  if (!active) {
-    return NextResponse.json({ error: 'No active session' }, { status: 404 });
+  const testSession = await getActiveSession(session.user.id);
+  if (!testSession) {
+    return NextResponse.json({ error: 'Aucune session active' }, { status: 404 });
   }
 
-  // Vérifie qu'on attend bien cette question (anti-triche basique)
-  const questionsOrder = active.questionsOrder as string[];
-  const expectedQuestionId = questionsOrder[active.currentQuestionIndex];
-  if (expectedQuestionId !== questionId) {
-    return NextResponse.json({ error: 'Question mismatch' }, { status: 400 });
+  const questionsOrder = testSession.questionsOrder as string[];
+  const expectedId = questionsOrder[testSession.currentQuestionIndex];
+  if (expectedId !== questionId) {
+    return NextResponse.json({ error: 'Question non attendue' }, { status: 400 });
   }
 
-  // Récupère la question pour comparer la bonne réponse
-  const question = await prisma.question.findUnique({
-    where: { id: questionId },
-  });
+  const question = await prisma.question.findUnique({ where: { id: questionId } });
   if (!question) {
-    return NextResponse.json({ error: 'Question not found' }, { status: 404 });
+    return NextResponse.json({ error: 'Question introuvable' }, { status: 404 });
   }
 
   const isCorrect =
@@ -48,22 +45,16 @@ export async function POST(request: Request) {
     selectedOptionIndex !== null &&
     selectedOptionIndex === question.correctAnswerIndex;
 
-  // Sauvegarde la réponse (upsert pour éviter doublons si retry)
   await prisma.answer.upsert({
     where: {
       testSessionId_questionId: {
-        testSessionId: active.id,
+        testSessionId: testSession.id,
         questionId,
       },
     },
-    update: {
-      selectedOptionIndex,
-      isCorrect,
-      timeSpent,
-      answeredAt: new Date(),
-    },
+    update: { selectedOptionIndex, isCorrect, timeSpent },
     create: {
-      testSessionId: active.id,
+      testSessionId: testSession.id,
       questionId,
       selectedOptionIndex,
       isCorrect,
@@ -71,18 +62,19 @@ export async function POST(request: Request) {
     },
   });
 
-  // Avance l'index
-  const newIndex = active.currentQuestionIndex + 1;
-  const isFinished = newIndex >= questionsOrder.length;
+  const nextIndex = testSession.currentQuestionIndex + 1;
 
   await prisma.testSession.update({
-    where: { id: active.id },
-    data: { currentQuestionIndex: newIndex },
+    where: { id: testSession.id },
+    data: {
+      currentQuestionIndex: { increment: 1 },
+      currentQuestionServedCount: 0,
+    },
   });
 
   return NextResponse.json({
     saved: true,
-    nextIndex: newIndex,
-    finished: isFinished,
+    nextIndex,
+    finished: nextIndex >= questionsOrder.length,
   });
 }

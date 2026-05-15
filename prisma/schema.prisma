@@ -90,6 +90,7 @@ model TestSession {
   status                TestStatus  @default(NOT_STARTED)
   currentQuestionIndex  Int         @default(0)
   questionsOrder        Json
+  currentQuestionServedCount Int @default(0)
   startedAt             DateTime?
   completedAt           DateTime?
   scoreProcedural       Int?
