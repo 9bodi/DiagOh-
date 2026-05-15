@@ -11,6 +11,7 @@ interface UserActionsProps {
   status: string;
   sessionId: string | null;
   organizationCredits: number;
+  passwordCreated: boolean;
 }
 
 export default function UserActions({
@@ -19,14 +20,17 @@ export default function UserActions({
   status,
   sessionId,
   organizationCredits,
+  passwordCreated,
 }: UserActionsProps) {
   const router = useRouter();
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const canDownloadPdf = status === 'COMPLETED' && sessionId;
   const canReset = status === 'IN_PROGRESS' || status === 'COMPLETED';
   const isCompletedReset = status === 'COMPLETED';
+  const canResend = !passwordCreated;
 
   async function handleReset() {
     setLoading(true);
@@ -54,9 +58,43 @@ export default function UserActions({
     }
   }
 
+  async function handleResend() {
+    setResending(true);
+    try {
+      const res = await fetch('/api/admin/resend-invitation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      setResending(false);
+
+      if (!res.ok) {
+        toast.error(data.error ?? 'Erreur lors du renvoi.');
+        return;
+      }
+
+      toast.success(`Invitation renvoyée à ${userName}`);
+    } catch (e) {
+      console.error(e);
+      setResending(false);
+      toast.error('Erreur réseau.');
+    }
+  }
+
   return (
     <>
       <div className="flex items-center justify-end gap-2">
+        {canResend && (
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resending}
+            className="text-xs font-medium text-ohe-blue hover:text-ohe-blue-dark transition-colors px-2 py-1 disabled:opacity-50"
+          >
+            {resending ? '...' : '📨 Renvoyer'}
+          </button>
+        )}
         {canDownloadPdf && (
           <a
             href={`/api/pdf/${userId}`}
@@ -76,7 +114,7 @@ export default function UserActions({
             🔄 Reset
           </button>
         )}
-        {!canReset && !canDownloadPdf && (
+        {!canReset && !canDownloadPdf && !canResend && (
           <span className="text-xs text-ohe-slate-400">—</span>
         )}
       </div>

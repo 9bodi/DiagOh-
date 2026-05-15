@@ -48,14 +48,13 @@ export default function UsersTable({
   users: UserRow[];
   credits: number;
 }) {
-
   if (users.length === 0) {
     return (
       <div className="p-12 text-center">
         <div className="text-4xl mb-3">👥</div>
         <p className="text-ohe-slate-600 mb-2">Aucun collaborateur invité pour le moment.</p>
         <p className="text-sm text-ohe-slate-500">
-          Le bouton &quot;Inviter un collaborateur&quot; sera disponible à la prochaine étape.
+          Cliquez sur &quot;+ Inviter un collaborateur&quot; pour commencer.
         </p>
       </div>
     );
@@ -90,8 +89,14 @@ export default function UsersTable({
           {users.map((u) => {
             const statusInfo = STATUS_LABELS[u.status] ?? STATUS_LABELS.NOT_STARTED;
             const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ') || '—';
+            const userNameForActions =
+              [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email;
+
             return (
-              <tr key={u.id} className="border-b border-ohe-slate-100 hover:bg-ohe-slate-50/50 transition-colors">
+              <tr
+                key={u.id}
+                className="border-b border-ohe-slate-100 hover:bg-ohe-slate-50/50 transition-colors"
+              >
                 <td className="px-6 py-4">
                   <div>
                     <p className="text-sm font-medium text-ohe-slate-900">{fullName}</p>
@@ -138,15 +143,15 @@ export default function UsersTable({
                   )}
                 </td>
                 <td className="px-6 py-4 text-right">
-  <UserActions
-    userId={u.id}
-    userName={[u.firstName, u.lastName].filter(Boolean).join(' ') || u.email}
-    status={u.status}
-    sessionId={u.sessionId}
-    organizationCredits={credits}
-  />
-</td>
-
+                  <UserActions
+                    userId={u.id}
+                    userName={userNameForActions}
+                    status={u.status}
+                    sessionId={u.sessionId}
+                    organizationCredits={credits}
+                    passwordCreated={u.passwordCreated}
+                  />
+                </td>
               </tr>
             );
           })}
