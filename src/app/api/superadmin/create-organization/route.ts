@@ -3,6 +3,8 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import crypto from 'crypto';
 import { z } from 'zod';
+import { sendMagicLinkEmail } from '@/lib/email';
+
 
 const schema = z.object({
   name: z.string().min(1).max(100),
@@ -73,6 +75,13 @@ export async function POST(request: Request) {
   const magicLinkUrl = `${baseUrl}/magic-link/${token}`;
 
   console.log(`🔗 Magic link admin (${adminEmail}): ${magicLinkUrl}`);
+
+    await sendMagicLinkEmail({
+    to: adminEmail,
+    magicLinkUrl,
+    organizationName: name,
+    recipientRole: 'ADMIN',
+  });
 
   return NextResponse.json({
     success: true,

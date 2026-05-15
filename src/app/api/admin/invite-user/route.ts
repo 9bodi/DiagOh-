@@ -1,49 +1,62 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { sendMagicLinkEmail } from '@/lib/email';
 import { z } from 'zod';
 import crypto from 'crypto';
 
-const inviteSchema = z.object({
-  email: z.string().email().toLowerCase().trim(),
+const schema = z.object({
+  email: z.string().email(),
 });
 
 export async function POST(request: Request) {
   const session = await auth();
-  if (!session || session.user.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  if (!session?.user || session.user.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
-  const orgId = session.user.organizationId;
-  if (!orgId) {
-    return NextResponse.json({ error: 'No organization' }, { status: 400 });
+  if (!session.user.organizationId) {
+    return NextResponse.json({ error: 'Aucune organisation associée' }, { status: 400 });
   }
 
   const body = await request.json();
-  const parsed = inviteSchema.safeParse(body);
+  const parsed = schema.safeParse(body);
+
   if (!parsed.success) {
     return NextResponse.json({ error: 'Email invalide' }, { status: 400 });
   }
+
   const { email } = parsed.data;
 
-  // Vérifier que l'email n'existe pas déjà
+  // Vérifier que l'organisation existe
+  const organization = await prisma.organization.findUnique({
+    where: { id: session.user.organizationId },
+  });
+
+  if (!organization) {
+    return NextResponse.json({ error: 'Organisation introuvable' }, { status: 404 });
+  }
+
+  // Vérifier que l'email n'est pas déjà utilisé
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return NextResponse.json(
-      { error: 'Un compte avec cet email existe déjà.' },
+      { error: 'Cet email est déjà utilisé.' },
       { status: 409 }
     );
   }
 
-  // Génère un magic link token unique
+  // Générer le token magic link
   const magicLinkToken = crypto.randomBytes(32).toString('hex');
-  const magicLinkExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 jours
+  const magicLinkExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
+  // Créer l'utilisateur
   const newUser = await prisma.user.create({
     data: {
       email,
       role: 'USER',
-      organizationId: orgId,
+      organizationId: organization.id,
       magicLinkToken,
       magicLinkExpiresAt,
       passwordCreated: false,
@@ -57,6 +70,14 @@ export async function POST(request: Request) {
   // En dev : on log le lien dans la console serveur pour pouvoir le copier
   console.log(`\n📧 Magic link pour ${email}:`);
   console.log(`   ${magicLinkUrl}\n`);
+
+  // Envoi de l'email
+  await sendMagicLinkEmail({
+    to: newUser.email,
+    magicLinkUrl,
+    organizationName: organization.name,
+    recipientRole: 'USER',
+  });
 
   return NextResponse.json({
     user: { id: newUser.id, email: newUser.email },
