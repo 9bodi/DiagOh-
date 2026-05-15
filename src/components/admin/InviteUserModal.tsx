@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -14,7 +15,6 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [magicLink, setMagicLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -22,7 +22,6 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     try {
@@ -35,16 +34,17 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
       setLoading(false);
 
       if (!res.ok) {
-        setError(data.error ?? 'Erreur lors de l\'invitation.');
+        toast.error(data.error ?? "Erreur lors de l'invitation.");
         return;
       }
 
+      toast.success(`Invitation envoyée à ${email}`);
       setMagicLink(data.magicLinkUrl);
-      router.refresh(); // recharge la liste des users en arrière-plan
+      router.refresh();
     } catch (e) {
       console.error(e);
       setLoading(false);
-      setError('Erreur réseau. Réessayez.');
+      toast.error('Erreur réseau. Réessayez.');
     }
   }
 
@@ -52,13 +52,13 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
     if (!magicLink) return;
     navigator.clipboard.writeText(magicLink);
     setCopied(true);
+    toast.success('Lien copié dans le presse-papier');
     setTimeout(() => setCopied(false), 2000);
   }
 
   function handleClose() {
     setEmail('');
     setMagicLink(null);
-    setError('');
     setCopied(false);
     onClose();
   }
@@ -66,7 +66,6 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
   function handleInviteAnother() {
     setEmail('');
     setMagicLink(null);
-    setError('');
     setCopied(false);
   }
 
@@ -79,8 +78,8 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
               Inviter un collaborateur
             </h3>
             <p className="text-sm text-ohe-slate-600 mb-6">
-              Saisissez son adresse email professionnelle. Un lien d&apos;activation lui permettra
-              de créer son compte et passer le diagnostic.
+              Saisissez son adresse email professionnelle. Un lien d&apos;activation lui sera
+              envoyé automatiquement pour créer son compte et passer le diagnostic.
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -93,12 +92,6 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
                 required
                 autoFocus
               />
-
-              {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-700">{error}</p>
-                </div>
-              )}
 
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="secondary" fullWidth onClick={handleClose}>
@@ -113,10 +106,10 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
         ) : (
           <>
             <div className="text-3xl mb-3">✅</div>
-            <h3 className="text-xl font-bold text-ohe-slate-900 mb-2">Invitation créée</h3>
+            <h3 className="text-xl font-bold text-ohe-slate-900 mb-2">Invitation envoyée</h3>
             <p className="text-sm text-ohe-slate-600 mb-4">
-              Le collaborateur <strong>{email}</strong> a été ajouté. Voici son lien
-              d&apos;activation :
+              Un email a été envoyé à <strong>{email}</strong>. Vous pouvez aussi lui
+              transmettre directement le lien :
             </p>
 
             <div className="p-3 bg-ohe-slate-50 border border-ohe-slate-200 rounded-lg mb-4">
@@ -127,13 +120,6 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
               <Button variant="secondary" fullWidth onClick={handleCopy}>
                 {copied ? '✓ Copié !' : '📋 Copier le lien'}
               </Button>
-            </div>
-
-            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
-              <p className="text-xs text-yellow-900">
-                <strong>ℹ️ Mode développement :</strong> l&apos;envoi automatique par email sera
-                configuré plus tard. Pour l&apos;instant, copiez ce lien et envoyez-le manuellement.
-              </p>
             </div>
 
             <div className="flex gap-3">

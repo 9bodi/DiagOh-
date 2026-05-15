@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -14,12 +15,10 @@ export default function AddCreditsModal({ organization, onClose }: Props) {
   const [amount, setAmount] = useState('');
   const [reason, setReason] = useState('purchase');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     const res = await fetch('/api/superadmin/add-credits', {
@@ -35,11 +34,12 @@ export default function AddCreditsModal({ organization, onClose }: Props) {
     const data = await res.json();
 
     if (!res.ok) {
-      setError(data.error || 'Une erreur est survenue.');
+      toast.error(data.error || 'Une erreur est survenue.');
       setLoading(false);
       return;
     }
 
+    toast.success(`${amount} crédits ajoutés à ${organization.name}`);
     router.refresh();
     onClose();
   };
@@ -78,11 +78,6 @@ export default function AddCreditsModal({ organization, onClose }: Props) {
                 <option value="other">Autre</option>
               </select>
             </div>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded">
-                {error}
-              </div>
-            )}
             <div className="flex gap-3 pt-2">
               <Button type="button" variant="ghost" fullWidth onClick={onClose}>
                 Annuler

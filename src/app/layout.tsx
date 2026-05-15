@@ -1,21 +1,32 @@
-import type { Metadata } from "next";
-import SessionProvider from "@/components/SessionProvider";
-import "./globals.css";
+import type { Metadata } from 'next';
+import './globals.css';
+import SessionProvider from '@/components/SessionProvider';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
-  title: "OHé Diag — Diagnostic d'orthographe",
-  description: "Plateforme de diagnostic d'orthographe et de français pour les organisations",
+  title: 'OHé Diag',
+  description: 'Diagnostic en orthographe et français',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="fr">
       <body className="antialiased">
         <SessionProvider>{children}</SessionProvider>
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          toastOptions={{
+            style: {
+              fontFamily: 'inherit',
+            },
+          }}
+        />
       </body>
     </html>
   );

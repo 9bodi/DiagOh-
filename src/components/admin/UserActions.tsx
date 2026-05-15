@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import Button from '@/components/ui/Button';
 
 interface UserActionsProps {
@@ -22,14 +23,12 @@ export default function UserActions({
   const router = useRouter();
   const [resetModalOpen, setResetModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const canDownloadPdf = status === 'COMPLETED' && sessionId;
   const canReset = status === 'IN_PROGRESS' || status === 'COMPLETED';
   const isCompletedReset = status === 'COMPLETED';
 
   async function handleReset() {
-    setError('');
     setLoading(true);
     try {
       const res = await fetch('/api/admin/reset-user', {
@@ -41,24 +40,18 @@ export default function UserActions({
       setLoading(false);
 
       if (!res.ok) {
-        setError(data.error ?? 'Erreur lors du reset.');
+        toast.error(data.error ?? 'Erreur lors du reset.');
         return;
       }
 
+      toast.success(`Test de ${userName} réinitialisé`);
       setResetModalOpen(false);
       router.refresh();
     } catch (e) {
       console.error(e);
       setLoading(false);
-      setError('Erreur réseau.');
+      toast.error('Erreur réseau.');
     }
-  }
-
-  function handleDownloadPdf() {
-    // Placeholder pour l'étape G (génération PDF)
-    alert(
-      'La génération PDF sera implémentée à l\'étape suivante.\n\nElle ouvrira un PDF avec le bilan complet du collaborateur (niveau, scores par compétence, préconisations).'
-    );
   }
 
   return (
@@ -66,14 +59,13 @@ export default function UserActions({
       <div className="flex items-center justify-end gap-2">
         {canDownloadPdf && (
           <a
-  href={`/api/pdf/${userId}`}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="text-xs font-medium text-ohe-blue hover:text-ohe-blue-dark transition-colors px-2 py-1"
->
-  📄 Bilan PDF
-</a>
-
+            href={`/api/pdf/${userId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-ohe-blue hover:text-ohe-blue-dark transition-colors px-2 py-1"
+          >
+            📄 Bilan PDF
+          </a>
         )}
         {canReset && (
           <button
@@ -110,12 +102,6 @@ export default function UserActions({
                 de le repasser depuis le début. <strong>Aucun crédit ne sera consommé</strong> tant
                 que le nouveau test n&apos;est pas terminé.
               </p>
-            )}
-
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-                <p className="text-sm text-red-700">{error}</p>
-              </div>
             )}
 
             {isCompletedReset && organizationCredits === 0 && (

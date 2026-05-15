@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -10,13 +11,11 @@ export default function CreateOrganizationModal({ onClose }: { onClose: () => vo
   const [adminEmail, setAdminEmail] = useState('');
   const [credits, setCredits] = useState('10');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [magicLink, setMagicLink] = useState('');
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
 
     const res = await fetch('/api/superadmin/create-organization', {
@@ -32,18 +31,15 @@ export default function CreateOrganizationModal({ onClose }: { onClose: () => vo
     const data = await res.json();
 
     if (!res.ok) {
-      setError(data.error || 'Une erreur est survenue.');
+      toast.error(data.error || 'Une erreur est survenue.');
       setLoading(false);
       return;
     }
 
+    toast.success(`Organisation "${name}" créée. Email envoyé à l'admin.`);
     setMagicLink(data.magicLinkUrl);
     setLoading(false);
     router.refresh();
-  };
-
-  const handleClose = () => {
-    onClose();
   };
 
   return (
@@ -55,7 +51,7 @@ export default function CreateOrganizationModal({ onClose }: { onClose: () => vo
               ✅ Organisation créée
             </h2>
             <p className="text-sm text-ohe-slate-600 mb-4">
-              Voici le lien d'activation à transmettre à l'admin :
+              L'email a été envoyé. Vous pouvez aussi copier le lien d'activation :
             </p>
             <div className="bg-ohe-slate-50 border border-ohe-slate-200 rounded p-3 mb-4 text-xs break-all font-mono">
               {magicLink}
@@ -65,11 +61,12 @@ export default function CreateOrganizationModal({ onClose }: { onClose: () => vo
               fullWidth
               onClick={() => {
                 navigator.clipboard.writeText(magicLink);
+                toast.success('Lien copié dans le presse-papier');
               }}
             >
               📋 Copier le lien
             </Button>
-            <Button variant="ghost" fullWidth onClick={handleClose} className="mt-2">
+            <Button variant="ghost" fullWidth onClick={onClose} className="mt-2">
               Fermer
             </Button>
           </>
@@ -102,13 +99,8 @@ export default function CreateOrganizationModal({ onClose }: { onClose: () => vo
                 min="0"
                 required
               />
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded">
-                  {error}
-                </div>
-              )}
               <div className="flex gap-3 pt-2">
-                <Button type="button" variant="ghost" fullWidth onClick={handleClose}>
+                <Button type="button" variant="ghost" fullWidth onClick={onClose}>
                   Annuler
                 </Button>
                 <Button type="submit" variant="primary" fullWidth loading={loading}>
