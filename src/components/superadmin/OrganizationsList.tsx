@@ -1,9 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
 import CreateOrganizationModal from './CreateOrganizationModal';
 import AddCreditsModal from './AddCreditsModal';
 
@@ -18,8 +21,46 @@ interface Org {
 }
 
 export default function OrganizationsList({ organizations }: { organizations: Org[] }) {
+  const router = useRouter();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creditOrg, setCreditOrg] = useState<Org | null>(null);
+  const [deleteOrg, setDeleteOrg] = useState<Org | null>(null);
+  const [confirmName, setConfirmName] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDelete() {
+    if (!deleteOrg) return;
+
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/superadmin/delete-organization', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ organizationId: deleteOrg.id }),
+      });
+      const data = await res.json();
+      setDeleting(false);
+
+      if (!res.ok) {
+        toast.error(data.error ?? 'Erreur lors de la suppression.');
+        return;
+      }
+
+      toast.success(`Organisation "${deleteOrg.name}" supprimée`);
+      setDeleteOrg(null);
+      setConfirmName('');
+      router.refresh();
+    } catch (e) {
+      console.error(e);
+      setDeleting(false);
+      toast.error('Erreur réseau.');
+    }
+  }
+
+  function closeDeleteModal() {
+    setDeleteOrg(null);
+    setConfirmName('');
+  }
 
   return (
     <>
@@ -65,6 +106,14 @@ export default function OrganizationsList({ organizations }: { organizations: Or
                   <Link href={`/organizations/${org.id}`}>
                     <Button variant="ghost" size="sm">Détails →</Button>
                   </Link>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteOrg(org)}
+                    className="text-xs font-medium text-ohe-slate-500 hover:text-red-600 transition-colors px-2 py-1"
+                    title="Supprimer l'organisation"
+                  >
+                    🗑️
+                  </button>
                 </div>
               </div>
             </Card>
@@ -80,6 +129,56 @@ export default function OrganizationsList({ organizations }: { organizations: Or
           organization={creditOrg}
           onClose={() => setCreditOrg(null)}
         />
+      )}
+
+      {/* Modal Delete */}
+      {deleteOrg && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+            <div className="text-3xl mb-3">🗑️</div>
+            <h3 className="text-xl font-bold text-ohe-slate-900 mb-2">
+              Supprimer l&apos;organisation &quot;{deleteOrg.name}&quot;
+            </h3>
+            <p className="text-sm text-ohe-slate-600 mb-4">
+              Cette action est <strong>définitive</strong> et supprimera :
+            </p>
+            <ul className="text-sm text-ohe-slate-600 mb-4 ml-4 list-disc">
+              <li>{deleteOrg.adminsCount} admin{deleteOrg.adminsCount > 1 ? 's' : ''}</li>
+              <li>{deleteOrg.usersCount} collaborateur{deleteOrg.usersCount > 1 ? 's' : ''}</li>
+              <li>Tous les tests et résultats associés</li>
+              <li>L&apos;historique des transactions de crédits</li>
+            </ul>
+            <p className="text-sm text-ohe-slate-700 mb-3">
+              Pour confirmer, saisissez exactement <strong>{deleteOrg.name}</strong> :
+            </p>
+            <Input
+              value={confirmName}
+              onChange={(e) => setConfirmName(e.target.value)}
+              placeholder={deleteOrg.name}
+              autoFocus
+            />
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={closeDeleteModal}
+                disabled={deleting}
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="danger"
+                fullWidth
+                onClick={handleDelete}
+                loading={deleting}
+                disabled={confirmName !== deleteOrg.name}
+              >
+                Supprimer définitivement
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

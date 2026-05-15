@@ -29,7 +29,6 @@ export async function POST(request: Request) {
 
   const { email } = parsed.data;
 
-  // Vérifier que l'organisation existe
   const organization = await prisma.organization.findUnique({
     where: { id: session.user.organizationId },
   });
@@ -38,7 +37,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Organisation introuvable' }, { status: 404 });
   }
 
-  // Vérifier que l'email n'est pas déjà utilisé
+  // Blocage si crédits insuffisants
+  if (organization.credits <= 0) {
+    return NextResponse.json(
+      { error: 'Crédits insuffisants. Contactez OHé pour recharger votre compte.' },
+      { status: 402 }
+    );
+  }
+
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     return NextResponse.json(
@@ -47,31 +53,44 @@ export async function POST(request: Request) {
     );
   }
 
-  // Générer le token magic link
   const magicLinkToken = crypto.randomBytes(32).toString('hex');
   const magicLinkExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-  // Créer l'utilisateur
-  const newUser = await prisma.user.create({
-    data: {
-      email,
-      role: 'USER',
-      organizationId: organization.id,
-      magicLinkToken,
-      magicLinkExpiresAt,
-      passwordCreated: false,
-    },
+  // Transaction : créer user + décrémenter crédit + log transaction
+  const newUser = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        email,
+        role: 'USER',
+        organizationId: organization.id,
+        magicLinkToken,
+        magicLinkExpiresAt,
+        passwordCreated: false,
+      },
+    });
+
+    await tx.organization.update({
+      where: { id: organization.id },
+      data: { credits: { decrement: 1 } },
+    });
+
+    await tx.creditTransaction.create({
+      data: {
+        organizationId: organization.id,
+        amount: -1,
+        reason: 'user_invitation',
+        createdById: session.user.id,
+      },
+    });
+
+    return user;
   });
 
-  // Construit l'URL du magic link
   const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
   const magicLinkUrl = `${baseUrl}/magic-link/${magicLinkToken}`;
 
-  // En dev : on log le lien dans la console serveur pour pouvoir le copier
-  console.log(`\n📧 Magic link pour ${email}:`);
-  console.log(`   ${magicLinkUrl}\n`);
+  console.log(`\n📧 Magic link pour ${email}:\n   ${magicLinkUrl}\n`);
 
-  // Envoi de l'email
   await sendMagicLinkEmail({
     to: newUser.email,
     magicLinkUrl,

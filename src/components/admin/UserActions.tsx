@@ -24,6 +24,7 @@ export default function UserActions({
 }: UserActionsProps) {
   const router = useRouter();
   const [resetModalOpen, setResetModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
 
@@ -31,6 +32,7 @@ export default function UserActions({
   const canReset = status === 'IN_PROGRESS' || status === 'COMPLETED';
   const isCompletedReset = status === 'COMPLETED';
   const canResend = !passwordCreated;
+  const willRefundOnDelete = !passwordCreated;
 
   async function handleReset() {
     setLoading(true);
@@ -82,6 +84,36 @@ export default function UserActions({
     }
   }
 
+  async function handleDelete() {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+      const data = await res.json();
+      setLoading(false);
+
+      if (!res.ok) {
+        toast.error(data.error ?? 'Erreur lors de la suppression.');
+        return;
+      }
+
+      if (data.refunded) {
+        toast.success(`${userName} supprimé · 1 crédit remboursé`);
+      } else {
+        toast.success(`${userName} supprimé`);
+      }
+      setDeleteModalOpen(false);
+      router.refresh();
+    } catch (e) {
+      console.error(e);
+      setLoading(false);
+      toast.error('Erreur réseau.');
+    }
+  }
+
   return (
     <>
       <div className="flex items-center justify-end gap-2">
@@ -109,16 +141,21 @@ export default function UserActions({
           <button
             type="button"
             onClick={() => setResetModalOpen(true)}
-            className="text-xs font-medium text-ohe-slate-600 hover:text-red-600 transition-colors px-2 py-1"
+            className="text-xs font-medium text-ohe-slate-600 hover:text-orange-600 transition-colors px-2 py-1"
           >
             🔄 Reset
           </button>
         )}
-        {!canReset && !canDownloadPdf && !canResend && (
-          <span className="text-xs text-ohe-slate-400">—</span>
-        )}
+        <button
+          type="button"
+          onClick={() => setDeleteModalOpen(true)}
+          className="text-xs font-medium text-ohe-slate-500 hover:text-red-600 transition-colors px-2 py-1"
+        >
+          🗑️ Supprimer
+        </button>
       </div>
 
+      {/* Modal Reset */}
       {resetModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
           <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
@@ -137,8 +174,7 @@ export default function UserActions({
             ) : (
               <p className="text-sm text-ohe-slate-600 mb-4">
                 <strong>{userName}</strong> a un test en cours. La réinitialisation lui permettra
-                de le repasser depuis le début. <strong>Aucun crédit ne sera consommé</strong> tant
-                que le nouveau test n&apos;est pas terminé.
+                de le repasser depuis le début. <strong>Aucun crédit ne sera consommé</strong>.
               </p>
             )}
 
@@ -167,6 +203,57 @@ export default function UserActions({
                 disabled={isCompletedReset && organizationCredits === 0}
               >
                 Confirmer le reset
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Delete */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
+          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+            <div className="text-3xl mb-3">🗑️</div>
+            <h3 className="text-xl font-bold text-ohe-slate-900 mb-2">
+              Supprimer {userName}
+            </h3>
+            <p className="text-sm text-ohe-slate-600 mb-4">
+              Cette action est <strong>définitive</strong>. Le collaborateur, son test
+              et toutes ses réponses seront supprimés.
+            </p>
+
+            {willRefundOnDelete ? (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
+                <p className="text-sm text-green-800">
+                  ✓ Ce collaborateur n&apos;a pas activé son compte. <strong>1 crédit sera
+                  remboursé</strong> à votre organisation.
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg mb-4">
+                <p className="text-sm text-orange-800">
+                  ⚠️ Ce collaborateur a déjà activé son compte. <strong>Aucun crédit ne sera
+                  remboursé</strong>.
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                fullWidth
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={loading}
+              >
+                Annuler
+              </Button>
+              <Button
+                variant="danger"
+                fullWidth
+                onClick={handleDelete}
+                loading={loading}
+              >
+                Supprimer définitivement
               </Button>
             </div>
           </div>
