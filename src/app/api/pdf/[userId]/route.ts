@@ -73,7 +73,11 @@ export async function GET(
     quadrant: (lastSession.quadrant ?? 1) as 1 | 2 | 3 | 4,
   };
 
-  const buffer = await renderToBuffer(React.createElement(BilanPDF, { data }));
+  const buffer = await renderToBuffer(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  React.createElement(BilanPDF as any, { data })
+);
+
 
   const filename = `bilan-${targetUser.lastName ?? 'user'}-${targetUser.firstName ?? ''}.pdf`
     .toLowerCase()
