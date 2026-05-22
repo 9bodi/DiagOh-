@@ -79,7 +79,7 @@ export async function GET() {
       type: question.type,
       category: question.category,
       subCategory: question.subCategory,
-      text: question.text,
+      text: question.questionText,
       options: question.options,
       timeLimit: question.timeLimit,
     },
