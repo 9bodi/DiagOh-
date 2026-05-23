@@ -16,21 +16,26 @@ export async function POST() {
     return NextResponse.json({ error: 'No active session' }, { status: 404 });
   }
 
-  // Calcul des scores
-  const { scoreProcedural, scoreDeclaratif, level, quadrant } =
-    await computeAndSaveScores(active.id);
+  const scores = await computeAndSaveScores(active.id);
 
-  // Marque la session comme complétée + sauvegarde les scores
+  // Marque la session comme complétée + sauvegarde tous les scores
   // Le crédit a déjà été consommé à l'invitation, plus rien à faire ici.
   await prisma.testSession.update({
     where: { id: active.id },
     data: {
       status: TestStatus.COMPLETED,
       completedAt: new Date(),
-      scoreProcedural,
-      scoreDeclaratif,
-      level,
-      quadrant,
+      scoreBloc1: scores.scoreBloc1,
+      scoreBloc2: scores.scoreBloc2,
+      scoreBloc3: scores.scoreBloc3,
+      scoreBloc4: scores.scoreBloc4,
+      scoreBloc5: scores.scoreBloc5,
+      scoreBloc6: scores.scoreBloc6,
+      scoreProcedural: scores.scoreProcedural,
+      level: scores.level,
+      scoreAdaptation: scores.scoreAdaptation,
+      scoreInteret: scores.scoreInteret,
+      quadrant: scores.quadrant,
       creditConsumed: true,
     },
   });
@@ -38,8 +43,10 @@ export async function POST() {
   return NextResponse.json({
     completed: true,
     sessionId: active.id,
-    level,
-    scoreProcedural,
-    quadrant,
+    level: scores.level,
+    scoreProcedural: scores.scoreProcedural,
+    scoreAdaptation: scores.scoreAdaptation,
+    scoreInteret: scores.scoreInteret,
+    quadrant: scores.quadrant,
   });
 }

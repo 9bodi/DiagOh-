@@ -13,7 +13,8 @@ interface Question {
   type: 'PROCEDURAL' | 'DECLARATIF';
   category: string | null;
   subCategory: string | null;
-  questionText: string;
+  text: string;
+  sourceText?: string | null;
   options: string[];
   timeLimit: number;
 }
@@ -41,7 +42,6 @@ export default function TestRunner({ userName }: { userName: string }) {
       try {
         const startRes = await fetch('/api/test/start', { method: 'POST' });
         if (startRes.status === 409) {
-          // Test déjà complété
           router.push('/result');
           return;
         }
@@ -49,7 +49,6 @@ export default function TestRunner({ userName }: { userName: string }) {
 
         const questionRes = await fetch('/api/test/question');
         if (questionRes.status === 404) {
-          // Pas de question : test fini
           await completeTest();
           return;
         }
@@ -137,7 +136,7 @@ export default function TestRunner({ userName }: { userName: string }) {
       } catch (e) {
         console.error(e);
         setSubmitting(false);
-        setError('Erreur lors de l\'enregistrement de la réponse.');
+        setError("Erreur lors de l'enregistrement de la réponse.");
       }
     },
     [data, submitting, fetchNextQuestion]
@@ -208,9 +207,19 @@ export default function TestRunner({ userName }: { userName: string }) {
       {/* Question */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-3xl">
+          {question.sourceText && (
+            <div className="mb-6 p-5 bg-ohe-slate-50 border-l-4 border-ohe-blue rounded-r-lg">
+              <p className="text-xs font-semibold text-ohe-slate-500 uppercase tracking-wide mb-2">
+                Texte à lire
+              </p>
+              <p className="text-base text-ohe-slate-900 leading-relaxed">
+                {question.sourceText}
+              </p>
+            </div>
+          )}
           <QuestionCard
             subCategory={question.subCategory}
-            questionText={question.questionText}
+            questionText={question.text}
             options={question.options}
             selectedIndex={selectedIndex}
             onSelect={setSelectedIndex}
@@ -249,29 +258,26 @@ export default function TestRunner({ userName }: { userName: string }) {
             <h3 className="text-xl font-bold text-ohe-slate-900 mb-2">
               Confirmez-vous votre sortie ?
             </h3>
-           <p className="text-sm text-ohe-slate-600 mb-6">
-  Si vous quittez maintenant, <strong>la question actuelle sera comptée comme fausse</strong>.
-  Vous reprendrez le test à la question suivante. Cette action est définitive.
-</p>
-
+            <p className="text-sm text-ohe-slate-600 mb-6">
+              Si vous quittez maintenant, <strong>la question actuelle sera comptée comme fausse</strong>.
+              Vous reprendrez le test à la question suivante. Cette action est définitive.
+            </p>
 
             <div className="flex gap-3">
               <Button variant="secondary" fullWidth onClick={() => setShowExitModal(false)}>
                 Annuler
               </Button>
               <Button
-  variant="danger"
-  fullWidth
-  onClick={async () => {
-    setShowExitModal(false);
-    // Enregistre la question courante comme non-répondue (fausse)
-    await submitAnswer(null);
-    router.push('/welcome');
-  }}
->
-  Quitter
-</Button>
-
+                variant="danger"
+                fullWidth
+                onClick={async () => {
+                  setShowExitModal(false);
+                  await submitAnswer(null);
+                  router.push('/welcome');
+                }}
+              >
+                Quitter
+              </Button>
             </div>
           </div>
         </div>

@@ -9,7 +9,7 @@ interface QuestionCardProps {
   disabled?: boolean;
 }
 
-const LETTERS = ['A', 'B', 'C', 'D'];
+const LETTERS = ['A', 'B', 'C', 'D', 'E'];
 
 export default function QuestionCard({
   subCategory,
@@ -27,12 +27,8 @@ export default function QuestionCard({
         </p>
       )}
 
-      <h2 className="text-xl sm:text-2xl font-semibold text-ohe-slate-900 mb-2">
-        Complétez la phrase :
-      </h2>
-
       <div className="p-5 bg-ohe-slate-50 border border-ohe-slate-200 rounded-xl mb-8">
-        <p className="text-lg text-ohe-slate-900 leading-relaxed">{questionText}</p>
+        <p className="text-lg text-ohe-slate-900 leading-relaxed font-medium">{questionText}</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

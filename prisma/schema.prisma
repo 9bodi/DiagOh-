@@ -30,12 +30,13 @@ enum QuestionType {
 }
 
 enum QuestionCategory {
-  ORTHOGRAPHE_LEXICALE
-  ORTHOGRAPHE_GRAMMATICALE
-  CONJUGAISON
-  SYNTAXE
-  PONCTUATION
-  VOCABULAIRE
+  SINGULAR_PLURAL      // Bloc 1
+  CONJUGATION          // Bloc 2
+  PAST_PARTICIPLE      // Bloc 3
+  SPELLING             // Bloc 4
+  SYNTAX               // Bloc 5
+  COMPREHENSION        // Bloc 6
+  DECLARATIVE          // Bloc 7
 }
 
 enum Level {
@@ -46,8 +47,8 @@ enum Level {
 }
 
 enum DeclarativeAxis {
+  ADAPTATION
   INTEREST
-  RELEVANCE
 }
 
 // ============ MODELS ============
@@ -85,24 +86,41 @@ model User {
 }
 
 model TestSession {
-  id                    String      @id @default(cuid())
-  userId                String
-  status                TestStatus  @default(NOT_STARTED)
-  currentQuestionIndex  Int         @default(0)
-  questionsOrder        Json
-  currentQuestionServedCount Int @default(0)
-  startedAt             DateTime?
-  completedAt           DateTime?
-  scoreProcedural       Int?
-  scoreDeclaratif       Int?
-  level                 Level?
-  quadrant              Int?
-  creditConsumed        Boolean     @default(false)
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
+  id                          String      @id @default(cuid())
+  userId                      String
+  status                      TestStatus  @default(NOT_STARTED)
+  currentQuestionIndex        Int         @default(0)
+  questionsOrder              Json
+  currentQuestionServedCount  Int         @default(0)
+  startedAt                   DateTime?
+  completedAt                 DateTime?
 
-  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  answers               Answer[]
+  // Scores par bloc (procédural) — 0, 0.5, 0.75 ou 1
+  scoreBloc1                  Float?
+  scoreBloc2                  Float?
+  scoreBloc3                  Float?
+  scoreBloc4                  Float?
+  scoreBloc5                  Float?
+  scoreBloc6                  Float?
+
+  // Score global procédural
+  scoreProcedural             Float?      // Total /6 (0 à 6)
+  level                       Level?
+
+  // Scores déclaratifs (sur 5 chacun)
+  scoreAdaptation             Int?
+  scoreInteret                Int?
+  quadrant                    Int?        // 1 à 4
+
+  // Legacy (gardé pour compat ascendante, sera supprimé plus tard)
+  scoreDeclaratif             Int?
+
+  creditConsumed              Boolean     @default(false)
+  createdAt                   DateTime    @default(now())
+  updatedAt                   DateTime    @updatedAt
+
+  user                        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answers                     Answer[]
 
   @@index([userId])
   @@index([status])
@@ -113,7 +131,9 @@ model Question {
   type                QuestionType
   category            QuestionCategory?
   subCategory         String?
+  blockNumber         Int?             // 1 à 7 (pour scoring par bloc)
   questionText        String
+  sourceText          String?          // Texte source pour le bloc 6 (compréhension)
   options             Json
   correctAnswerIndex  Int?
   declarativeAxis     DeclarativeAxis?
@@ -127,6 +147,7 @@ model Question {
 
   @@index([type])
   @@index([category])
+  @@index([blockNumber])
 }
 
 model Answer {

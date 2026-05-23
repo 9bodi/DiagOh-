@@ -2,29 +2,50 @@ import { prisma } from './prisma';
 import { TestStatus } from '@prisma/client';
 
 /**
- * Tire aléatoirement N questions de chaque catégorie procédurale
- * + les questions déclaratives, et retourne l'ordre final.
- *
- * Pour le MVP : on prend toutes les questions actives.
- * Plus tard : on tirera 8 questions par bloc/catégorie.
+ * Mélange un tableau via Fisher-Yates (in-place, retourne une copie).
  */
-export async function buildQuestionsOrder() {
-  // Pour le MVP, on prend simplement toutes les questions actives,
-  // procédurales d'abord (mélangées), puis déclaratives à la fin.
-  const procedural = await prisma.question.findMany({
-    where: { active: true, type: 'PROCEDURAL' },
-    select: { id: true },
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+/**
+ * Construit l'ordre des questions selon le CDC v3 :
+ *   - Blocs 1+2+3 mélangés ENTRE EUX (24 questions, ordre aléatoire global)
+ *   - Bloc 4 mélangé seul (8 questions)
+ *   - Bloc 5 mélangé seul (8 questions)
+ *   - Bloc 6 mélangé seul (8 questions)
+ *   - Bloc 7 dans l'ordre original (10 questions)
+ * Total : 58 questions.
+ */
+export async function buildQuestionsOrder(): Promise<string[]> {
+  // Récupère toutes les questions actives, regroupées par bloc
+  const allQuestions = await prisma.question.findMany({
+    where: { active: true },
+    select: { id: true, blockNumber: true, createdAt: true },
+    orderBy: { createdAt: 'asc' }, // ordre stable pour le bloc 7
   });
 
-  const declaratif = await prisma.question.findMany({
-    where: { active: true, type: 'DECLARATIF' },
-    select: { id: true },
-  });
+  const byBlock = (n: number) =>
+    allQuestions.filter((q) => q.blockNumber === n).map((q) => q.id);
 
-  // Shuffle Fisher-Yates pour les procédurales
-  const shuffled = [...procedural].sort(() => Math.random() - 0.5);
+  const blocs123 = [...byBlock(1), ...byBlock(2), ...byBlock(3)];
+  const bloc4 = byBlock(4);
+  const bloc5 = byBlock(5);
+  const bloc6 = byBlock(6);
+  const bloc7 = byBlock(7); // dans l'ordre
 
-  return [...shuffled.map((q) => q.id), ...declaratif.map((q) => q.id)];
+  return [
+    ...shuffle(blocs123),
+    ...shuffle(bloc4),
+    ...shuffle(bloc5),
+    ...shuffle(bloc6),
+    ...bloc7,
+  ];
 }
 
 /**
