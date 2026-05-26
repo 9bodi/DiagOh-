@@ -133,6 +133,7 @@ model Question {
   subCategory         String?
   blockNumber         Int?             // 1 à 7 (pour scoring par bloc)
   questionText        String
+  instruction      String?
   sourceText          String?          // Texte source pour le bloc 6 (compréhension)
   options             Json
   correctAnswerIndex  Int?

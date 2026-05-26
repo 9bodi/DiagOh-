@@ -75,15 +75,15 @@ export async function GET() {
     currentIndex,
     totalQuestions: questionsOrder.length,
     question: {
-  id: question.id,
-  type: question.type,
-  category: question.category,
-  subCategory: question.subCategory,
-  text: question.questionText,
-  sourceText: question.sourceText,
-  options: question.options,
-  timeLimit: question.timeLimit,
-},
-
+      id: question.id,
+      type: question.type,
+      category: question.category,
+      subCategory: question.subCategory,
+      instruction: question.instruction,
+      text: question.questionText,
+      sourceText: question.sourceText,
+      options: question.options,
+      timeLimit: question.timeLimit,
+    },
   });
 }

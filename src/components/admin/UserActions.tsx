@@ -44,19 +44,12 @@ export default function UserActions({
       });
       const data = await res.json();
       setLoading(false);
-
-      if (!res.ok) {
-        toast.error(data.error ?? 'Erreur lors du reset.');
-        return;
-      }
-
+      if (!res.ok) { toast.error(data.error ?? 'Erreur lors du reset.'); return; }
       toast.success(`Test de ${userName} réinitialisé`);
       setResetModalOpen(false);
       router.refresh();
     } catch (e) {
-      console.error(e);
-      setLoading(false);
-      toast.error('Erreur réseau.');
+      console.error(e); setLoading(false); toast.error('Erreur réseau.');
     }
   }
 
@@ -70,17 +63,10 @@ export default function UserActions({
       });
       const data = await res.json();
       setResending(false);
-
-      if (!res.ok) {
-        toast.error(data.error ?? 'Erreur lors du renvoi.');
-        return;
-      }
-
+      if (!res.ok) { toast.error(data.error ?? 'Erreur lors du renvoi.'); return; }
       toast.success(`Invitation renvoyée à ${userName}`);
     } catch (e) {
-      console.error(e);
-      setResending(false);
-      toast.error('Erreur réseau.');
+      console.error(e); setResending(false); toast.error('Erreur réseau.');
     }
   }
 
@@ -94,171 +80,182 @@ export default function UserActions({
       });
       const data = await res.json();
       setLoading(false);
-
-      if (!res.ok) {
-        toast.error(data.error ?? 'Erreur lors de la suppression.');
-        return;
-      }
-
-      if (data.refunded) {
-        toast.success(`${userName} supprimé · 1 crédit remboursé`);
-      } else {
-        toast.success(`${userName} supprimé`);
-      }
+      if (!res.ok) { toast.error(data.error ?? 'Erreur lors de la suppression.'); return; }
+      if (data.refunded) toast.success(`${userName} supprimé · 1 crédit remboursé`);
+      else toast.success(`${userName} supprimé`);
       setDeleteModalOpen(false);
       router.refresh();
     } catch (e) {
-      console.error(e);
-      setLoading(false);
-      toast.error('Erreur réseau.');
+      console.error(e); setLoading(false); toast.error('Erreur réseau.');
     }
   }
 
   return (
     <>
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-1">
         {canResend && (
-          <button
-            type="button"
-            onClick={handleResend}
-            disabled={resending}
-            className="text-xs font-medium text-ohe-blue hover:text-ohe-blue-dark transition-colors px-2 py-1 disabled:opacity-50"
-          >
-            {resending ? '...' : '📨 Renvoyer'}
-          </button>
+          <ActionLink onClick={handleResend} disabled={resending} tone="blue" title="Renvoyer l'invitation">
+            {resending ? '…' : 'Renvoyer'}
+          </ActionLink>
         )}
         {canDownloadPdf && (
           <a
             href={`/api/pdf/${userId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs font-medium text-ohe-blue hover:text-ohe-blue-dark transition-colors px-2 py-1"
+            className="px-2.5 py-1 rounded-md text-[11px] font-medium text-ohe-blue hover:bg-ohe-blue/[0.06] transition-colors"
+            title="Télécharger le bilan PDF"
           >
-            📄 Bilan PDF
+            Bilan PDF
           </a>
         )}
         {canReset && (
-          <button
-            type="button"
-            onClick={() => setResetModalOpen(true)}
-            className="text-xs font-medium text-ohe-slate-600 hover:text-orange-600 transition-colors px-2 py-1"
-          >
-            🔄 Reset
-          </button>
+          <ActionLink onClick={() => setResetModalOpen(true)} tone="orange" title="Réinitialiser le test">
+            Reset
+          </ActionLink>
         )}
-        <button
-          type="button"
-          onClick={() => setDeleteModalOpen(true)}
-          className="text-xs font-medium text-ohe-slate-500 hover:text-red-600 transition-colors px-2 py-1"
-        >
-          🗑️ Supprimer
-        </button>
+        <ActionLink onClick={() => setDeleteModalOpen(true)} tone="red" title="Supprimer le collaborateur">
+          Supprimer
+        </ActionLink>
       </div>
 
       {/* Modal Reset */}
       {resetModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
-            <div className="text-3xl mb-3">⚠️</div>
-            <h3 className="text-xl font-bold text-ohe-slate-900 mb-2">
-              Réinitialiser le test de {userName}
-            </h3>
+        <Modal>
+          <ModalKicker>✱ Confirmation requise</ModalKicker>
+          <ModalTitle>Réinitialiser le test de {userName} ?</ModalTitle>
 
-            {isCompletedReset ? (
-              <p className="text-sm text-ohe-slate-600 mb-4">
-                <strong>{userName} a déjà passé le diagnostic.</strong> Un nouveau passage
-                consommera <strong>1 crédit supplémentaire</strong> (
-                {organizationCredits} crédit{organizationCredits > 1 ? 's' : ''} restant
-                {organizationCredits > 1 ? 's' : ''}). Confirmer ?
+          {isCompletedReset ? (
+            <p className="text-sm text-ohe-slate-600 leading-relaxed mb-4">
+              <strong className="text-ohe-slate-900">{userName}</strong> a déjà passé le diagnostic. Un nouveau passage consommera{' '}
+              <strong className="text-ohe-slate-900">1 crédit supplémentaire</strong> ({organizationCredits} restant{organizationCredits > 1 ? 's' : ''}).
+            </p>
+          ) : (
+            <p className="text-sm text-ohe-slate-600 leading-relaxed mb-4">
+              <strong className="text-ohe-slate-900">{userName}</strong> a un test en cours. La réinitialisation lui permettra de le repasser depuis le début.{' '}
+              <strong className="text-ohe-slate-900">Aucun crédit ne sera consommé.</strong>
+            </p>
+          )}
+
+          {isCompletedReset && organizationCredits === 0 && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-lg mb-4">
+              <p className="text-sm text-red-700">
+                Vous n&apos;avez plus de crédits. Contactez OHé pour recharger votre compte.
               </p>
-            ) : (
-              <p className="text-sm text-ohe-slate-600 mb-4">
-                <strong>{userName}</strong> a un test en cours. La réinitialisation lui permettra
-                de le repasser depuis le début. <strong>Aucun crédit ne sera consommé</strong>.
-              </p>
-            )}
-
-            {isCompletedReset && organizationCredits === 0 && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
-                <p className="text-sm text-red-700">
-                  Vous n&apos;avez plus de crédits. Contactez OHé pour recharger votre compte.
-                </p>
-              </div>
-            )}
-
-            <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={() => setResetModalOpen(false)}
-                disabled={loading}
-              >
-                Annuler
-              </Button>
-              <Button
-                variant="danger"
-                fullWidth
-                onClick={handleReset}
-                loading={loading}
-                disabled={isCompletedReset && organizationCredits === 0}
-              >
-                Confirmer le reset
-              </Button>
             </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button variant="secondary" fullWidth onClick={() => setResetModalOpen(false)} disabled={loading}>
+              Annuler
+            </Button>
+            <Button
+              variant="danger"
+              fullWidth
+              onClick={handleReset}
+              loading={loading}
+              disabled={isCompletedReset && organizationCredits === 0}
+            >
+              Confirmer le reset
+            </Button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal Delete */}
       {deleteModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
-          <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
-            <div className="text-3xl mb-3">🗑️</div>
-            <h3 className="text-xl font-bold text-ohe-slate-900 mb-2">
-              Supprimer {userName}
-            </h3>
-            <p className="text-sm text-ohe-slate-600 mb-4">
-              Cette action est <strong>définitive</strong>. Le collaborateur, son test
-              et toutes ses réponses seront supprimés.
-            </p>
+        <Modal>
+          <ModalKicker>✱ Action définitive</ModalKicker>
+          <ModalTitle>Supprimer {userName} ?</ModalTitle>
 
-            {willRefundOnDelete ? (
-              <div className="p-3 bg-green-50 border border-green-200 rounded-lg mb-4">
-                <p className="text-sm text-green-800">
-                  ✓ Ce collaborateur n&apos;a pas activé son compte. <strong>1 crédit sera
-                  remboursé</strong> à votre organisation.
-                </p>
-              </div>
-            ) : (
-              <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg mb-4">
-                <p className="text-sm text-orange-800">
-                  ⚠️ Ce collaborateur a déjà activé son compte. <strong>Aucun crédit ne sera
-                  remboursé</strong>.
-                </p>
-              </div>
-            )}
+          <p className="text-sm text-ohe-slate-600 leading-relaxed mb-4">
+            Cette action est <strong className="text-ohe-slate-900">définitive</strong>. Le collaborateur, son test et toutes ses réponses seront supprimés.
+          </p>
 
-            <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={() => setDeleteModalOpen(false)}
-                disabled={loading}
-              >
-                Annuler
-              </Button>
-              <Button
-                variant="danger"
-                fullWidth
-                onClick={handleDelete}
-                loading={loading}
-              >
-                Supprimer définitivement
-              </Button>
+          {willRefundOnDelete ? (
+            <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg mb-4">
+              <p className="text-sm text-emerald-800">
+                Ce collaborateur n&apos;a pas activé son compte. <strong>1 crédit sera remboursé</strong> à votre organisation.
+              </p>
             </div>
+          ) : (
+            <div className="p-3 bg-ohe-orange/5 border border-ohe-orange/20 rounded-lg mb-4">
+              <p className="text-sm text-ohe-slate-900">
+                Ce collaborateur a déjà activé son compte. <strong>Aucun crédit ne sera remboursé.</strong>
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <Button variant="secondary" fullWidth onClick={() => setDeleteModalOpen(false)} disabled={loading}>
+              Annuler
+            </Button>
+            <Button variant="danger" fullWidth onClick={handleDelete} loading={loading}>
+              Supprimer définitivement
+            </Button>
           </div>
-        </div>
+        </Modal>
       )}
     </>
+  );
+}
+
+// ============ Sub-components ============
+
+function ActionLink({
+  children,
+  onClick,
+  disabled,
+  title,
+  tone,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  title?: string;
+  tone: 'blue' | 'orange' | 'red';
+}) {
+  const toneClass = {
+    blue: 'text-ohe-slate-600 hover:text-ohe-blue hover:bg-ohe-blue/[0.06]',
+    orange: 'text-ohe-slate-600 hover:text-ohe-orange hover:bg-ohe-orange/[0.06]',
+    red: 'text-ohe-slate-500 hover:text-red-600 hover:bg-red-50',
+  }[tone];
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors disabled:opacity-50 ${toneClass}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Modal({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 bg-ohe-slate-900/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
+      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ModalKicker({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
+      {children}
+    </p>
+  );
+}
+
+function ModalTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 className="font-serif text-2xl text-ohe-slate-900 mb-3 leading-snug">
+      {children}
+    </h3>
   );
 }

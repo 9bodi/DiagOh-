@@ -29,29 +29,32 @@ export default function Timer({ duration, onExpire, resetKey }: TimerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft]);
 
-  // Cercle SVG : périmètre = 2 * π * r
-  const radius = 22;
+  // Cercle SVG
+  const radius = 25;
   const circumference = 2 * Math.PI * radius;
   const progress = (timeLeft / duration) * circumference;
 
-  // Couleur selon le temps restant
   const colorClass =
-    timeLeft > 7 ? 'stroke-ohe-blue' : timeLeft > 3 ? 'stroke-ohe-orange' : 'stroke-red-500';
+    timeLeft > 7
+      ? 'stroke-ohe-blue'
+      : timeLeft > 3
+      ? 'stroke-ohe-orange'
+      : 'stroke-red-500';
 
   return (
     <div className="relative w-14 h-14 flex items-center justify-center">
-      <svg className="absolute inset-0 -rotate-90" viewBox="0 0 50 50">
+      <svg className="absolute inset-0 -rotate-90" viewBox="0 0 56 56">
         <circle
-          cx="25"
-          cy="25"
+          cx="28"
+          cy="28"
           r={radius}
           fill="none"
           className="stroke-ohe-slate-200"
           strokeWidth="3"
         />
         <circle
-          cx="25"
-          cy="25"
+          cx="28"
+          cy="28"
           r={radius}
           fill="none"
           className={`${colorClass} transition-all duration-1000 ease-linear`}
@@ -61,7 +64,9 @@ export default function Timer({ duration, onExpire, resetKey }: TimerProps) {
           strokeLinecap="round"
         />
       </svg>
-      <span className="text-sm font-bold text-ohe-slate-900">{timeLeft}</span>
+      <span className="relative font-mono text-base font-bold text-ohe-slate-900 tabular-nums">
+        {timeLeft}
+      </span>
     </div>
   );
 }

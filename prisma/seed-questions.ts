@@ -2,6 +2,19 @@ import { PrismaClient, QuestionType, QuestionCategory, DeclarativeAxis } from '@
 
 const prisma = new PrismaClient();
 
+// ============ Métadonnées par bloc ============
+// instruction = consigne par défaut affichée au-dessus de la question
+// subCategory = étiquette orange affichée tout en haut
+const META = {
+  bloc1: { subCategory: 'Orthographe grammaticale', instruction: 'Choisissez la bonne orthographe.' },
+  bloc2: { subCategory: 'Conjugaison',              instruction: 'Choisissez la forme verbale correcte.' },
+  bloc3: { subCategory: 'Participe passé',          instruction: 'Choisissez le participe passé correctement accordé.' },
+  bloc4: { subCategory: 'Orthographe lexicale',     instruction: 'Parmi ces mots inventés, quelle écriture vous semble correcte ?' },
+  bloc5: { subCategory: 'Syntaxe',                  instruction: 'Quelle phrase est correctement construite ?' },
+  bloc6: { subCategory: 'Compréhension',            instruction: 'Lisez le texte ci-dessus, puis répondez à la question.' },
+  bloc7: { subCategory: 'Questionnaire',            instruction: 'Que pensez-vous de cette affirmation ?' },
+};
+
 // ============ BLOC 1 — Singulier/Pluriel (10s) ============
 const bloc1 = [
   { q: 'Les charges ___ sont colossales.', opts: ['patronal', 'patronale', 'patronals', 'patronales', 'je ne sais pas trop'], correct: 3 },
@@ -17,12 +30,12 @@ const bloc1 = [
 // ============ BLOC 2 — Conjugaison (10s) ============
 const bloc2 = [
   { q: 'Je ___ tous les dimanches à la messe.', opts: ['prie', 'prit', 'pris', 'je ne sais pas trop'], correct: 0 },
-  { q: 'Je ___ le dossier et m\'en allai.', opts: ['prie', 'prit', 'pris', 'je ne sais pas trop'], correct: 2 },
+  { q: "Je ___ le dossier et m'en allai.", opts: ['prie', 'prit', 'pris', 'je ne sais pas trop'], correct: 2 },
   { q: 'Alec a ___ une bonne décision.', opts: ['prie', 'prit', 'pris', 'je ne sais pas trop'], correct: 2 },
-  { q: 'C\'est toi qui ___ le dossier.', opts: ['fini', 'finit', 'finis', 'je ne sais pas trop'], correct: 2 },
+  { q: "C'est toi qui ___ le dossier.", opts: ['fini', 'finit', 'finis', 'je ne sais pas trop'], correct: 2 },
   { q: 'Le stagiaire vous ___ le rapport avant ce soir.', opts: ['fini', 'finit', 'finis', 'je ne sais pas trop'], correct: 1 },
   { q: 'Il a hélas ___ en retard.', opts: ['fini', 'finit', 'finis', 'je ne sais pas trop'], correct: 0 },
-  { q: 'Je ___ le dossier d\'abord.', opts: ['constitue', 'constitut', 'constitus', 'je ne sais pas trop'], correct: 0 },
+  { q: "Je ___ le dossier d'abord.", opts: ['constitue', 'constitut', 'constitus', 'je ne sais pas trop'], correct: 0 },
   { q: "J'___ les courriels tout de suite.", opts: ['envoie', 'envoi', 'envois', 'je ne sais pas trop'], correct: 0 },
 ];
 
@@ -32,69 +45,71 @@ const bloc3 = [
   { q: 'Il est venu après avoir ___ la poubelle.', opts: ['vidé', 'vider', 'vidée', 'vidés', 'je ne sais pas trop'], correct: 0 },
   { q: 'Cet homme nous a ___ tous les papiers.', opts: ['volé', 'voler', 'volée', 'volés', 'je ne sais pas trop'], correct: 0 },
   { q: 'Elle a bien ___ la chemise.', opts: ['rangé', 'ranger', 'rangée', 'rangés', 'je ne sais pas trop'], correct: 0 },
-  { q: 'Voici le dossier qu\'ils ont ___.', opts: ['dérobé', 'dérober', 'dérobée', 'dérobés', 'je ne sais pas trop'], correct: 0 },
-  { q: 'Les dossiers qu\'il a ___ sont prêts.', opts: ['signé', 'signer', 'signée', 'signés', 'je ne sais pas trop'], correct: 3 },
-  { q: 'Je vérifie les lettres qu\'ils ont ___.', opts: ['envoyé', 'envoyer', 'envoyées', 'envoyés', 'je ne sais pas trop'], correct: 2 },
-  { q: 'Donne-moi les rapports qu\'ils ont ___.', opts: ['écris', 'écrit', 'écrits', 'écrient', 'je ne sais pas trop'], correct: 2 },
+  { q: "Voici le dossier qu'ils ont ___.", opts: ['dérobé', 'dérober', 'dérobée', 'dérobés', 'je ne sais pas trop'], correct: 0 },
+  { q: "Les dossiers qu'il a ___ sont prêts.", opts: ['signé', 'signer', 'signée', 'signés', 'je ne sais pas trop'], correct: 3 },
+  { q: "Je vérifie les lettres qu'ils ont ___.", opts: ['envoyé', 'envoyer', 'envoyées', 'envoyés', 'je ne sais pas trop'], correct: 2 },
+  { q: "Donne-moi les rapports qu'ils ont ___.", opts: ['écris', 'écrit', 'écrits', 'écrient', 'je ne sais pas trop'], correct: 2 },
 ];
 
 // ============ BLOC 4 — Orthographe mots inventés (15s) ============
+// La consigne est portée par META.bloc4 ; pas de phrase à compléter ici, juste des options.
 const bloc4 = [
-  { q: 'Parmi ces mots inventés, quelle écriture vous semble correcte ?', opts: ['littri', 'llitri', 'litrii', 'je ne sais pas trop'], correct: 0 },
-  { q: 'Parmi ces mots inventés, quelle écriture vous semble correcte ?', opts: ['trillsé', 'trrilé', 'trillé', 'je ne sais pas trop'], correct: 2 },
-  { q: 'Parmi ces mots inventés, quelle écriture vous semble correcte ?', opts: ['beaurris', 'bôrris', 'borris', 'je ne sais pas trop'], correct: 2 },
-  { q: 'Parmi ces mots inventés, quelle écriture vous semble correcte ?', opts: ['eaulage', 'foaulage', 'folageau', 'je ne sais pas trop'], correct: 2 },
-  { q: 'Parmi ces mots inventés, quelle écriture vous semble correcte ?', opts: ['andamne', 'andemn', 'andàmne', 'je ne sais pas trop'], correct: 0 },
-  { q: 'Parmi ces mots inventés, quelle écriture vous semble correcte ?', opts: ['lahhure', 'lavvure', 'larruve', 'je ne sais pas trop'], correct: 2 },
-  { q: 'Parmi ces mots inventés, quelle écriture vous semble correcte ?', opts: ['deçinor', 'deçénor', 'deçanor', 'je ne sais pas trop'], correct: 2 },
-  { q: 'Parmi ces mots inventés, quelle écriture vous semble correcte ?', opts: ['guaine', 'gaine', 'geaine', 'je ne sais pas trop'], correct: 1 },
+  { q: '', opts: ['littri', 'llitri', 'litrii', 'je ne sais pas trop'], correct: 0 },
+  { q: '', opts: ['trillsé', 'trrilé', 'trillé', 'je ne sais pas trop'], correct: 2 },
+  { q: '', opts: ['beaurris', 'bôrris', 'borris', 'je ne sais pas trop'], correct: 2 },
+  { q: '', opts: ['eaulage', 'foaulage', 'folageau', 'je ne sais pas trop'], correct: 2 },
+  { q: '', opts: ['andamne', 'andemn', 'andàmne', 'je ne sais pas trop'], correct: 0 },
+  { q: '', opts: ['lahhure', 'lavvure', 'larruve', 'je ne sais pas trop'], correct: 2 },
+  { q: '', opts: ['deçinor', 'deçénor', 'deçanor', 'je ne sais pas trop'], correct: 2 },
+  { q: '', opts: ['guaine', 'gaine', 'geaine', 'je ne sais pas trop'], correct: 1 },
 ];
 
 // ============ BLOC 5 — Syntaxe (15s) ============
+// La consigne est portée par META.bloc5 ; pas de phrase à compléter ici.
 const bloc5 = [
-  { q: 'Quelle phrase est correctement construite ?', opts: [
+  { q: '', opts: [
     'Le client nous a contactés et nous lui avons répondu.',
     "Le client nous a contactés et nous l'avons répondu.",
     'Le client nous a contactés et nous y avons répondu.',
     'Je ne sais pas trop'
   ], correct: 0 },
-  { q: 'Quelle phrase est correctement construite ?', opts: [
-    'C\'est une décision que nous nous félicitons.',
-    'C\'est une décision dont nous nous félicitons.',
-    'C\'est une décision de laquelle nous nous félicitons.',
+  { q: '', opts: [
+    "C'est une décision que nous nous félicitons.",
+    "C'est une décision dont nous nous félicitons.",
+    "C'est une décision de laquelle nous nous félicitons.",
     'Je ne sais pas trop'
   ], correct: 1 },
-  { q: 'Quelle phrase est correctement construite ?', opts: [
-    'C\'est un projet duquel je suis fier.',
-    'C\'est un projet que je suis fier.',
-    'C\'est un projet dont je suis fier.',
+  { q: '', opts: [
+    "C'est un projet duquel je suis fier.",
+    "C'est un projet que je suis fier.",
+    "C'est un projet dont je suis fier.",
     'Je ne sais pas trop'
   ], correct: 2 },
-  { q: 'Quelle phrase est correctement construite ?', opts: [
-    'C\'est un rapport que nous avons contribué.',
-    'C\'est un rapport à quoi nous avons contribué.',
-    'C\'est un rapport auquel nous avons contribué.',
+  { q: '', opts: [
+    "C'est un rapport que nous avons contribué.",
+    "C'est un rapport à quoi nous avons contribué.",
+    "C'est un rapport auquel nous avons contribué.",
     'Je ne sais pas trop'
   ], correct: 2 },
-  { q: 'Quelle phrase est correctement construite ?', opts: [
+  { q: '', opts: [
     'Il a décidé à changer.',
-    'Il s\'est décidé à changer.',
-    'Il s\'est décidé de changer.',
+    "Il s'est décidé à changer.",
+    "Il s'est décidé de changer.",
     'Je ne sais pas trop'
   ], correct: 1 },
-  { q: 'Quelle phrase est correctement construite ?', opts: [
+  { q: '', opts: [
     'Nous devons pallier à ce problème.',
     'Nous devons pallier ce problème.',
     'Nous devons pallier avec ce problème.',
     'Je ne sais pas trop'
   ], correct: 1 },
-  { q: 'Quelle phrase est correctement construite ?', opts: [
+  { q: '', opts: [
     'Je me rappelle de cette réunion importante.',
     'Je me rappelle cette réunion importante.',
     'Je me rappelle à cette réunion importante.',
     'Je ne sais pas trop'
   ], correct: 1 },
-  { q: 'Quelle phrase est correctement construite ?', opts: [
+  { q: '', opts: [
     'Malgré son retard, il a pris finalement le train.',
     'Malgré son retard, il a finalement pris le train.',
     'Malgré son retard, finalement il a pris le train.',
@@ -103,6 +118,7 @@ const bloc5 = [
 ];
 
 // ============ BLOC 6 — Compréhension (25s) ============
+// La consigne générique est dans META.bloc6 ; questionText reste la question spécifique.
 const bloc6 = [
   {
     source: 'Les commandes passées avant 16 h sont expédiées le jour même. Après 16 h, elles sont traitées le lendemain ouvré.',
@@ -119,13 +135,13 @@ const bloc6 = [
   {
     source: "Depuis plusieurs mois, l'entreprise investit dans de nouveaux outils numériques, afin de faciliter le travail à distance et d'améliorer la collaboration entre équipes.",
     q: "L'idée principale est :",
-    opts: ['L\'entreprise déménage', 'L\'entreprise modernise ses méthodes de travail', 'Les outils numériques coûtent cher', 'Je ne sais pas trop'],
+    opts: ["L'entreprise déménage", "L'entreprise modernise ses méthodes de travail", 'Les outils numériques coûtent cher', 'Je ne sais pas trop'],
     correct: 1
   },
   {
     source: "Le candidat n'a pas répondu à toutes les questions.",
     q: 'Quelle phrase exprime la même idée ?',
-    opts: ['Le candidat a répondu à certaines questions seulement', 'Le candidat n\'a répondu à aucune question', 'Le candidat a répondu à toutes les questions', 'Je ne sais pas trop'],
+    opts: ['Le candidat a répondu à certaines questions seulement', "Le candidat n'a répondu à aucune question", 'Le candidat a répondu à toutes les questions', 'Je ne sais pas trop'],
     correct: 0
   },
   {
@@ -155,16 +171,16 @@ const bloc6 = [
 ];
 
 // ============ BLOC 7 — Déclaratives (15s) ============
-// Réponses : ['Plutôt oui', 'Plutôt non']
-// declarativeWeight = 1 si "Plutôt oui" est la réponse positive (adapté/intéressé), 0 si c'est "Plutôt non"
+// Options : ['Plutôt oui', 'Plutôt non']
+// positiveAnswer = index de la réponse considérée comme positive (adapté / intéressé)
 const bloc7 = [
-  { q: 'Le français est-il votre première langue ou une langue que vous maitrisez bien à l\'oral ?', axis: 'ADAPTATION' as const, positiveAnswer: 0 }, // Oui = adapté
-  { q: 'Avez-vous des problèmes de lecture ?', axis: 'ADAPTATION' as const, positiveAnswer: 1 }, // Non = adapté
-  { q: 'Diriez-vous que vous avez des difficultés en orthographe ?', axis: 'ADAPTATION' as const, positiveAnswer: 0 }, // Oui = adapté
-  { q: 'Êtes-vous satisfait(e) de votre niveau en orthographe ?', axis: 'INTEREST' as const, positiveAnswer: 1 }, // Non = intéressé
-  { q: 'Vous a-t-on déjà fait des remarques négatives sur votre orthographe ?', axis: 'ADAPTATION' as const, positiveAnswer: 0 }, // Oui = adapté
-  { q: 'Êtes-vous à l\'aise avec l\'accord des verbes ?', axis: 'ADAPTATION' as const, positiveAnswer: 1 }, // Non = adapté
-  { q: "La maîtrise de l'orthographe vous est-elle utile ?", axis: 'INTEREST' as const, positiveAnswer: 0 }, // Oui = intéressé
+  { q: "Le français est-il votre première langue ou une langue que vous maitrisez bien à l'oral ?", axis: 'ADAPTATION' as const, positiveAnswer: 0 },
+  { q: 'Avez-vous des problèmes de lecture ?', axis: 'ADAPTATION' as const, positiveAnswer: 1 },
+  { q: 'Diriez-vous que vous avez des difficultés en orthographe ?', axis: 'ADAPTATION' as const, positiveAnswer: 0 },
+  { q: 'Êtes-vous satisfait(e) de votre niveau en orthographe ?', axis: 'INTEREST' as const, positiveAnswer: 1 },
+  { q: 'Vous a-t-on déjà fait des remarques négatives sur votre orthographe ?', axis: 'ADAPTATION' as const, positiveAnswer: 0 },
+  { q: "Êtes-vous à l'aise avec l'accord des verbes ?", axis: 'ADAPTATION' as const, positiveAnswer: 1 },
+  { q: "La maîtrise de l'orthographe vous est-elle utile ?", axis: 'INTEREST' as const, positiveAnswer: 0 },
   { q: 'Seriez-vous prêt(e) à consacrer quelques minutes par jour pour améliorer votre orthographe ?', axis: 'INTEREST' as const, positiveAnswer: 0 },
   { q: 'Si une formation vous aidait à progresser, souhaiteriez-vous commencer dans les prochains mois ?', axis: 'INTEREST' as const, positiveAnswer: 0 },
   { q: 'Si vous suiviez une formation, souhaiteriez-vous revoir les verbes ?', axis: 'INTEREST' as const, positiveAnswer: 0 },
@@ -184,6 +200,8 @@ async function main() {
         type: QuestionType.PROCEDURAL,
         category: QuestionCategory.SINGULAR_PLURAL,
         blockNumber: 1,
+        subCategory: META.bloc1.subCategory,
+        instruction: META.bloc1.instruction,
         questionText: item.q,
         options: item.opts,
         correctAnswerIndex: item.correct,
@@ -199,6 +217,8 @@ async function main() {
         type: QuestionType.PROCEDURAL,
         category: QuestionCategory.CONJUGATION,
         blockNumber: 2,
+        subCategory: META.bloc2.subCategory,
+        instruction: META.bloc2.instruction,
         questionText: item.q,
         options: item.opts,
         correctAnswerIndex: item.correct,
@@ -214,6 +234,8 @@ async function main() {
         type: QuestionType.PROCEDURAL,
         category: QuestionCategory.PAST_PARTICIPLE,
         blockNumber: 3,
+        subCategory: META.bloc3.subCategory,
+        instruction: META.bloc3.instruction,
         questionText: item.q,
         options: item.opts,
         correctAnswerIndex: item.correct,
@@ -229,6 +251,8 @@ async function main() {
         type: QuestionType.PROCEDURAL,
         category: QuestionCategory.SPELLING,
         blockNumber: 4,
+        subCategory: META.bloc4.subCategory,
+        instruction: META.bloc4.instruction,
         questionText: item.q,
         options: item.opts,
         correctAnswerIndex: item.correct,
@@ -244,6 +268,8 @@ async function main() {
         type: QuestionType.PROCEDURAL,
         category: QuestionCategory.SYNTAX,
         blockNumber: 5,
+        subCategory: META.bloc5.subCategory,
+        instruction: META.bloc5.instruction,
         questionText: item.q,
         options: item.opts,
         correctAnswerIndex: item.correct,
@@ -259,6 +285,8 @@ async function main() {
         type: QuestionType.PROCEDURAL,
         category: QuestionCategory.COMPREHENSION,
         blockNumber: 6,
+        subCategory: META.bloc6.subCategory,
+        instruction: META.bloc6.instruction,
         questionText: item.q,
         sourceText: item.source,
         options: item.opts,
@@ -275,6 +303,8 @@ async function main() {
         type: QuestionType.DECLARATIF,
         category: QuestionCategory.DECLARATIVE,
         blockNumber: 7,
+        subCategory: META.bloc7.subCategory,
+        instruction: META.bloc7.instruction,
         questionText: item.q,
         options: ['Plutôt oui', 'Plutôt non'],
         declarativeAxis: item.axis === 'ADAPTATION' ? DeclarativeAxis.ADAPTATION : DeclarativeAxis.INTEREST,

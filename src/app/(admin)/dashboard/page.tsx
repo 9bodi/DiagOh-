@@ -2,21 +2,16 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import Logo from '@/components/ui/Logo';
-import Card from '@/components/ui/Card';
-import LogoutButton from '@/components/LogoutButton';
+import AdminHeader from '@/components/admin/AdminHeader';
+import InviteCollabButton from '@/components/admin/InviteCollabButton';
 
 export default async function DashboardPage() {
   const session = await auth();
-
-  if (!session || session.user.role !== 'ADMIN') {
-    redirect('/login');
-  }
+  if (!session || session.user.role !== 'ADMIN') redirect('/login');
 
   const orgId = session.user.organizationId;
   if (!orgId) redirect('/login');
 
-  // Récupère l'organisation et les stats
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
     include: {
@@ -34,125 +29,184 @@ export default async function DashboardPage() {
 
   if (!org) redirect('/login');
 
-  // Calcule les stats
   const totalUsers = org.users.length;
-  const completedTests = org.users.filter(
-    (u) => u.testSessions[0]?.status === 'COMPLETED'
-  ).length;
-  const inProgressTests = org.users.filter(
-    (u) => u.testSessions[0]?.status === 'IN_PROGRESS'
-  ).length;
+  const completedTests = org.users.filter(u => u.testSessions[0]?.status === 'COMPLETED').length;
+  const inProgressTests = org.users.filter(u => u.testSessions[0]?.status === 'IN_PROGRESS').length;
   const notStartedTests = totalUsers - completedTests - inProgressTests;
+
+  const adminFirstName = session.user.name?.split(' ')[0] ?? '';
 
   return (
     <main className="min-h-screen bg-ohe-slate-50">
-      <header className="px-6 py-4 bg-white border-b border-ohe-slate-200 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Logo size="md" />
-          <span className="px-2 py-1 bg-ohe-slate-100 text-ohe-slate-600 text-xs font-semibold rounded">
-            ADMIN
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-sm font-medium text-ohe-slate-900">{session.user.name}</p>
-            <p className="text-xs text-ohe-slate-600">{org.name}</p>
-          </div>
-          <LogoutButton />
-        </div>
-      </header>
+      <AdminHeader
+        userName={session.user.name ?? ''}
+        orgName={org.name}
+        currentPath="/dashboard"
+      />
 
-      <div className="max-w-6xl mx-auto p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-ohe-slate-900 mb-1">
-            Tableau de bord
+      <div className="max-w-6xl mx-auto px-6 py-10">
+        {/* Hero */}
+        <div className="mb-10">
+          <p className="font-mono text-[11px] tracking-[0.16em] uppercase text-ohe-orange mb-4">
+            ✱ Tableau de bord
+          </p>
+          <h1 className="font-serif font-normal text-4xl lg:text-[52px] leading-[1.05] tracking-tight text-ohe-slate-900">
+            {adminFirstName ? `Bonjour ${adminFirstName},` : 'Bonjour,'}
+            <br />
+            <em className="italic text-ohe-blue">pilotez votre équipe.</em>
           </h1>
-          <p className="text-ohe-slate-600">Vue d&apos;ensemble de votre organisation.</p>
+          <p className="mt-5 text-base lg:text-lg text-ohe-slate-600 leading-relaxed max-w-xl">
+            Vue d&apos;ensemble de l&apos;activité diagnostic de {org.name}.
+          </p>
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <Card padding="md">
-            <p className="text-xs text-ohe-slate-600 uppercase tracking-wider mb-1">
-              Crédits restants
-            </p>
-            <p className="text-3xl font-bold text-ohe-blue">{org.credits}</p>
-            <p className="text-xs text-ohe-slate-600 mt-1">tests disponibles</p>
-          </Card>
-
-          <Card padding="md">
-            <p className="text-xs text-ohe-slate-600 uppercase tracking-wider mb-1">
-              Collaborateurs
-            </p>
-            <p className="text-3xl font-bold text-ohe-slate-900">{totalUsers}</p>
-            <p className="text-xs text-ohe-slate-600 mt-1">au total</p>
-          </Card>
-
-          <Card padding="md">
-            <p className="text-xs text-ohe-slate-600 uppercase tracking-wider mb-1">
-              Tests terminés
-            </p>
-            <p className="text-3xl font-bold text-green-600">{completedTests}</p>
-            <p className="text-xs text-ohe-slate-600 mt-1">résultats disponibles</p>
-          </Card>
-
-          <Card padding="md">
-            <p className="text-xs text-ohe-slate-600 uppercase tracking-wider mb-1">
-              En cours / À démarrer
-            </p>
-            <p className="text-3xl font-bold text-ohe-orange">
-              {inProgressTests + notStartedTests}
-            </p>
-            <p className="text-xs text-ohe-slate-600 mt-1">
-              {inProgressTests} en cours · {notStartedTests} pas démarrés
-            </p>
-          </Card>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+          <KpiCard
+            label="Crédits restants"
+            value={String(org.credits)}
+            hint="tests disponibles"
+            accent="blue"
+          />
+          <KpiCard
+            label="Collaborateurs"
+            value={String(totalUsers)}
+            hint="au total"
+            accent="slate"
+          />
+          <KpiCard
+            label="Tests terminés"
+            value={String(completedTests)}
+            hint="résultats disponibles"
+            accent="green"
+          />
+          <KpiCard
+            label="En cours · à démarrer"
+            value={String(inProgressTests + notStartedTests)}
+            hint={`${inProgressTests} en cours · ${notStartedTests} à démarrer`}
+            accent="orange"
+          />
         </div>
 
-        {/* Quick actions */}
+        {/* Actions principales */}
+        <div className="bg-white rounded-2xl border border-ohe-slate-200/60 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_40px_-20px_rgba(15,23,42,0.15)] p-8 lg:p-10 mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-7">
+            <div>
+              <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
+                ✱ Inviter
+              </p>
+              <h2 className="font-serif text-2xl lg:text-[28px] tracking-tight leading-tight text-ohe-slate-900">
+                Ajoutez un nouveau <em className="italic text-ohe-blue">collaborateur.</em>
+              </h2>
+              <p className="mt-2 text-sm text-ohe-slate-600 max-w-md">
+                Un lien d&apos;activation lui sera envoyé pour créer son compte et passer le diagnostic.
+              </p>
+            </div>
+            <InviteCollabButton />
+          </div>
+        </div>
+
+        {/* Quick links */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Link href="/users">
-            <Card padding="md" className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+          <Link href="/users" className="group">
+            <div className="h-full bg-white rounded-2xl border border-ohe-slate-200/60 p-6 transition-all hover:border-ohe-blue/40 hover:shadow-[0_8px_24px_-12px_rgba(45,61,181,0.25)]">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-ohe-blue/10 rounded-lg flex items-center justify-center text-2xl">
-                  👥
+                <div className="w-11 h-11 bg-ohe-blue/10 rounded-xl flex items-center justify-center text-ohe-blue flex-shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                  </svg>
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-ohe-slate-900 mb-1">Collaborateurs</h3>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ohe-slate-500 mb-1.5">
+                    Gestion
+                  </p>
+                  <h3 className="font-serif text-xl text-ohe-slate-900 mb-1.5 leading-tight">
+                    Vos collaborateurs
+                  </h3>
                   <p className="text-sm text-ohe-slate-600">
-                    Inviter, suivre et gérer les passages de vos collaborateurs.
+                    Suivre les passages, voir les résultats, gérer les sessions.
                   </p>
                 </div>
               </div>
-            </Card>
+            </div>
           </Link>
 
-          <Link href="/results">
-            <Card padding="md" className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+          <Link href="/results" className="group">
+            <div className="h-full bg-white rounded-2xl border border-ohe-slate-200/60 p-6 transition-all hover:border-ohe-orange/40 hover:shadow-[0_8px_24px_-12px_rgba(255,107,53,0.25)]">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-ohe-orange/10 rounded-lg flex items-center justify-center text-2xl">
-                  📊
+                <div className="w-11 h-11 bg-ohe-orange/10 rounded-xl flex items-center justify-center text-ohe-orange flex-shrink-0">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-ohe-slate-900 mb-1">Restitution collective</h3>
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ohe-slate-500 mb-1.5">
+                    Restitution
+                  </p>
+                  <h3 className="font-serif text-xl text-ohe-slate-900 mb-1.5 leading-tight">
+                    Vue collective
+                  </h3>
                   <p className="text-sm text-ohe-slate-600">
-                    Voir les résultats agrégés et les niveaux moyens.
+                    Résultats agrégés, niveaux moyens et tendances par bloc.
                   </p>
                 </div>
               </div>
-            </Card>
+            </div>
           </Link>
         </div>
 
+        {/* Alerte crédits */}
         {org.credits === 0 && (
-          <div className="mt-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-            <p className="text-sm text-orange-900">
-              <strong>⚠️ Plus de crédits disponibles.</strong> Contactez l&apos;équipe OHé pour
-              recharger votre compte.
-            </p>
+          <div className="mt-6 p-5 bg-ohe-orange/5 border border-ohe-orange/30 rounded-2xl flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-ohe-orange/15 text-ohe-orange flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ohe-orange mb-1">
+                Crédits épuisés
+              </p>
+              <p className="text-sm text-ohe-slate-900">
+                Plus aucun crédit disponible pour inviter de nouveaux collaborateurs.{' '}
+                <span className="text-ohe-slate-600">
+                  Contactez l&apos;équipe OHé pour recharger votre compte.
+                </span>
+              </p>
+            </div>
           </div>
         )}
       </div>
     </main>
   );
 }
+
+// ============ KPI Card ============
+interface KpiCardProps {
+  label: string;
+  value: string;
+  hint: string;
+  accent: 'blue' | 'slate' | 'green' | 'orange';
+}
+
+function KpiCard({ label, value, hint, accent }: KpiCardProps) {
+  const accentColor = {
+    blue:   'text-ohe-blue',
+    slate:  'text-ohe-slate-900',
+    green:  'text-emerald-600',
+    orange: 'text-ohe-orange',
+  }[accent];
+
+  return (
+    <div className="bg-white rounded-2xl border border-ohe-slate-200/60 p-5">
+      <p className="font-mono text-[10px] tracking-[0.14em] uppercase text-ohe-slate-500 mb-3">
+        {label}
+      </p>
+      <p className={`font-serif text-4xl lg:text-[44px] leading-none ${accentColor}`}>
+        {value}
+      </p>
+      <p className="text-xs text-ohe-slate-600 mt-3">{hint}</p>
+    </div>
+  );
+}
+
