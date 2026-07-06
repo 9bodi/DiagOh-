@@ -198,7 +198,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // ===== Étape 5 : traitement en transaction =====
+  // ===== Étape 5 : traitement en transaction (bulk, peu de requêtes) =====
   const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
   const magicLinksToSend: { email: string; magicLinkUrl: string }[] = [];
   let created = 0;
@@ -210,18 +210,27 @@ export async function POST(request: Request) {
     async (tx) => {
       // 5a) Créer les nouveaux groupes
       for (const groupName of groupsToCreate) {
-        const created = await tx.group.create({
+        const newGroup = await tx.group.create({
           data: { name: groupName, organizationId: orgId },
         });
         // Retrouver le rawName correspondant pour renseigner groupResolution
         const rawMatch = uniqueGroupNames.find(
           (r) => normalizeForCompare(normalizeGroupName(r)) === normalizeForCompare(groupName),
         );
-        if (rawMatch) groupResolution.set(rawMatch, created.id);
-        groupsCreatedNames.push(created.name);
+        if (rawMatch) groupResolution.set(rawMatch, newGroup.id);
+        groupsCreatedNames.push(newGroup.name);
       }
 
-      // 5b) Traiter chaque ligne
+      // 5b) Séparer users existants (attribution groupe) vs nouveaux (création bulk)
+      const usersToUpdate: { id: string; groupId: string }[] = [];
+      const newUserRows: {
+        id: string;
+        email: string;
+        groupId: string | null;
+        magicLinkToken: string;
+        magicLinkUrl: string;
+      }[] = [];
+
       for (const row of processableRows) {
         const groupId = row.groupName ? groupResolution.get(row.groupName) ?? null : null;
         const existing = existingByEmail.get(row.email);
@@ -229,59 +238,76 @@ export async function POST(request: Request) {
         if (existing) {
           // Existant : attribuer le groupe uniquement si l'user n'en a pas ET que le fichier en fournit un
           if (!existing.groupId && groupId) {
-            await tx.user.update({
-              where: { id: existing.id },
-              data: { groupId },
-            });
+            usersToUpdate.push({ id: existing.id, groupId });
             attributed++;
           } else {
             skipped++;
           }
         } else {
-          // Nouveau : créer user + session PENDING + magic-link
+          // Nouveau : préparer la création bulk (user + session + magic-link)
+          const id = crypto.randomUUID();
           const magicLinkToken = crypto.randomBytes(32).toString('hex');
-          const magicLinkExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-          const newUser = await tx.user.create({
-            data: {
-              email: row.email,
-              role: 'USER',
-              organizationId: orgId,
-              groupId,
-              magicLinkToken,
-              magicLinkExpiresAt,
-              passwordCreated: false,
-            },
-          });
-
-          await tx.testSession.create({
-            data: {
-              userId: newUser.id,
-              status: 'PENDING',
-              questionsOrder: [],
-            },
-          });
-
-          await tx.organization.update({
-            where: { id: orgId },
-            data: { credits: { decrement: 1 } },
-          });
-
-          await tx.creditTransaction.create({
-            data: {
-              organizationId: orgId,
-              amount: -1,
-              reason: 'user_import',
-              createdById: session.user.id,
-            },
-          });
-
-          created++;
-          magicLinksToSend.push({
+          newUserRows.push({
+            id,
             email: row.email,
+            groupId,
+            magicLinkToken,
             magicLinkUrl: `${baseUrl}/magic-link/${magicLinkToken}`,
           });
         }
+      }
+
+      // Attributions de groupe sur users existants (petit volume, boucle OK)
+      for (const u of usersToUpdate) {
+        await tx.user.update({ where: { id: u.id }, data: { groupId: u.groupId } });
+      }
+
+      if (newUserRows.length > 0) {
+        const magicLinkExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+        // Création bulk des users (1 requête au lieu de N)
+        await tx.user.createMany({
+          data: newUserRows.map((u) => ({
+            id: u.id,
+            email: u.email,
+            role: 'USER',
+            organizationId: orgId,
+            groupId: u.groupId,
+            magicLinkToken: u.magicLinkToken,
+            magicLinkExpiresAt,
+            passwordCreated: false,
+          })),
+        });
+
+        // Création bulk des sessions PENDING (1 requête au lieu de N)
+        await tx.testSession.createMany({
+          data: newUserRows.map((u) => ({
+            userId: u.id,
+            status: 'PENDING',
+            questionsOrder: [],
+          })),
+        });
+
+        // Décrément unique des crédits (1 requête au lieu de N)
+        await tx.organization.update({
+          where: { id: orgId },
+          data: { credits: { decrement: newUserRows.length } },
+        });
+
+        // Création bulk des transactions de crédit (1 requête au lieu de N)
+        await tx.creditTransaction.createMany({
+          data: newUserRows.map(() => ({
+            organizationId: orgId,
+            amount: -1,
+            reason: 'user_import',
+            createdById: session.user.id,
+          })),
+        });
+
+        created = newUserRows.length;
+        magicLinksToSend.push(
+          ...newUserRows.map((u) => ({ email: u.email, magicLinkUrl: u.magicLinkUrl })),
+        );
       }
     },
     { timeout: 30000 }, // 30s pour gros imports
