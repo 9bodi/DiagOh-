@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getActiveSession } from '@/lib/test-session';
+import { isSessionExpired } from '@/lib/deadline';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -27,6 +28,20 @@ export async function POST(request: Request) {
   const testSession = await getActiveSession(session.user.id);
   if (!testSession) {
     return NextResponse.json({ error: 'Aucune session active' }, { status: 404 });
+  }
+
+  // 🛡️ Garde-fou : vérifie la deadline
+  // Note : on autorise l'enregistrement de la réponse en cours même si la deadline
+  // vient de passer (règle métier : "laisser finir la question en cours").
+  // On expire la session APRÈS avoir enregistré la réponse.
+  const expiredNow = isSessionExpired(testSession);
+
+  // 🛡️ Garde-fou : statut doit être IN_PROGRESS
+  if (testSession.status !== 'IN_PROGRESS') {
+    return NextResponse.json(
+      { error: 'Session non démarrée ou déjà terminée.' },
+      { status: 403 }
+    );
   }
 
   const questionsOrder = testSession.questionsOrder as string[];
@@ -63,6 +78,23 @@ export async function POST(request: Request) {
   });
 
   const nextIndex = testSession.currentQuestionIndex + 1;
+
+  // Si la deadline est passée, on clôture après avoir enregistré cette réponse
+  if (expiredNow) {
+    await prisma.testSession.update({
+      where: { id: testSession.id },
+      data: {
+        status: 'EXPIRED',
+        expiredAt: new Date(),
+        currentQuestionServedCount: 0,
+      },
+    });
+    return NextResponse.json({
+      saved: true,
+      finished: true,
+      expired: true,
+    });
+  }
 
   await prisma.testSession.update({
     where: { id: testSession.id },

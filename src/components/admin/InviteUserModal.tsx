@@ -1,34 +1,67 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import GroupSelector from './GroupSelector';
+
+interface GroupOption {
+  id: string;
+  name: string;
+}
 
 interface InviteUserModalProps {
   isOpen: boolean;
   onClose: () => void;
+  groups?: GroupOption[];
+  userRole: string; // NOUVEAU
 }
 
-export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProps) {
+export default function InviteUserModal({
+  isOpen,
+  onClose,
+  groups = [],
+  userRole,
+}: InviteUserModalProps) {
   const router = useRouter();
   const [email, setEmail] = useState('');
+  const [groupId, setGroupId] = useState<string>('');
+  const [localGroups, setLocalGroups] = useState<GroupOption[]>(groups);
   const [loading, setLoading] = useState(false);
   const [magicLink, setMagicLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const isSupervisor = userRole === 'SUPERVISOR';
+
+  useEffect(() => {
+    setLocalGroups(groups);
+  }, [groups]);
+
+  // Pré-sélectionner automatiquement le seul groupe dispo pour un superviseur
+  useEffect(() => {
+    if (isOpen && isSupervisor && groups.length === 1 && !groupId) {
+      setGroupId(groups[0].id);
+    }
+  }, [isOpen, isSupervisor, groups, groupId]);
 
   if (!isOpen) return null;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setLoading(true);
 
+    if (isSupervisor && !groupId) {
+      toast.error('Vous devez sélectionner un de vos groupes.');
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await fetch('/api/admin/invite-user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, groupId: groupId || null }),
       });
       const data = await res.json();
       setLoading(false);
@@ -58,6 +91,7 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
 
   function handleClose() {
     setEmail('');
+    setGroupId('');
     setMagicLink(null);
     setCopied(false);
     onClose();
@@ -65,8 +99,14 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
 
   function handleInviteAnother() {
     setEmail('');
+    setGroupId(isSupervisor && groups.length === 1 ? groups[0].id : '');
     setMagicLink(null);
     setCopied(false);
+  }
+
+  function handleGroupCreated(newGroup: GroupOption) {
+    setLocalGroups((prev) => [...prev, newGroup].sort((a, b) => a.name.localeCompare(b.name)));
+    router.refresh();
   }
 
   return (
@@ -75,11 +115,12 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
         {!magicLink ? (
           <>
             <h3 className="text-xl font-bold text-ohe-slate-900 mb-2">
-              Inviter un collaborateur
+              Inviter un participant
             </h3>
             <p className="text-sm text-ohe-slate-600 mb-6">
-              Saisissez son adresse email professionnelle. Un lien d&apos;activation lui sera
-              envoyé automatiquement pour créer son compte et passer le diagnostic.
+              {isSupervisor
+                ? "Saisissez son email et choisissez un de vos groupes. Un lien d'activation lui sera envoyé."
+                : "Saisissez son adresse email professionnelle. Un lien d'activation lui sera envoyé automatiquement."}
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -93,11 +134,26 @@ export default function InviteUserModal({ isOpen, onClose }: InviteUserModalProp
                 autoFocus
               />
 
+              <GroupSelector
+                groups={localGroups}
+                value={groupId}
+                onChange={setGroupId}
+                onGroupCreated={handleGroupCreated}
+                allowNone={!isSupervisor}
+                allowCreate={!isSupervisor}
+              />
+
               <div className="flex gap-3 pt-2">
                 <Button type="button" variant="secondary" fullWidth onClick={handleClose}>
                   Annuler
                 </Button>
-                <Button type="submit" variant="primary" fullWidth loading={loading}>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  fullWidth
+                  loading={loading}
+                  disabled={isSupervisor && !groupId}
+                >
                   Inviter
                 </Button>
               </div>

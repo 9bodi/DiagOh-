@@ -4,19 +4,57 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import AdminHeader from '@/components/admin/AdminHeader';
 import InviteCollabButton from '@/components/admin/InviteCollabButton';
+import { getAccessibleGroupIds } from '@/lib/permissions';
 
 export default async function DashboardPage() {
   const session = await auth();
-  if (!session || session.user.role !== 'ADMIN') redirect('/login');
+  if (
+    !session ||
+    (session.user.role !== 'ADMIN' &&
+      session.user.role !== 'SUPERADMIN' &&
+      session.user.role !== 'SUPERVISOR')
+  ) {
+    redirect('/login');
+  }
 
   const orgId = session.user.organizationId;
   if (!orgId) redirect('/login');
+
+  // Filtrage par rôle : superviseur ne voit que les users de ses groupes
+  const isSupervisor = session.user.role === 'SUPERVISOR';
+  let userWhereClause: any = { role: 'USER', organizationId: orgId };
+
+  if (isSupervisor) {
+    const accessibleGroupIds = await getAccessibleGroupIds(
+      session.user.id,
+      session.user.role,
+      orgId,
+    );
+    userWhereClause = {
+      role: 'USER',
+      organizationId: orgId,
+      groupId: { in: accessibleGroupIds },
+    };
+  }
+  // (à placer après la définition de userWhereClause, avant le prisma.organization.findUnique)
+
+const accessibleGroupIds = isSupervisor
+  ? await getAccessibleGroupIds(session.user.id, session.user.role, orgId)
+  : null;
+
+const groups = await prisma.group.findMany({
+  where: isSupervisor
+    ? { organizationId: orgId, id: { in: accessibleGroupIds ?? [] } }
+    : { organizationId: orgId },
+  select: { id: true, name: true },
+  orderBy: { name: 'asc' },
+});
 
   const org = await prisma.organization.findUnique({
     where: { id: orgId },
     include: {
       users: {
-        where: { role: 'USER' },
+        where: userWhereClause,
         include: {
           testSessions: {
             orderBy: { createdAt: 'desc' },
@@ -30,8 +68,8 @@ export default async function DashboardPage() {
   if (!org) redirect('/login');
 
   const totalUsers = org.users.length;
-  const completedTests = org.users.filter(u => u.testSessions[0]?.status === 'COMPLETED').length;
-  const inProgressTests = org.users.filter(u => u.testSessions[0]?.status === 'IN_PROGRESS').length;
+  const completedTests = org.users.filter((u) => u.testSessions[0]?.status === 'COMPLETED').length;
+  const inProgressTests = org.users.filter((u) => u.testSessions[0]?.status === 'IN_PROGRESS').length;
   const notStartedTests = totalUsers - completedTests - inProgressTests;
 
   const adminFirstName = session.user.name?.split(' ')[0] ?? '';
@@ -39,10 +77,14 @@ export default async function DashboardPage() {
   return (
     <main className="min-h-screen bg-ohe-slate-50">
       <AdminHeader
-        userName={session.user.name ?? ''}
-        orgName={org.name}
-        currentPath="/dashboard"
-      />
+  userName={session.user.name ?? session.user.email}
+  orgName={org.name}
+  currentPath="/dashboard"
+  userRole={session.user.role}
+  isImpersonating={session.user.isImpersonating}
+/>
+
+
 
       <div className="max-w-6xl mx-auto px-6 py-10">
         {/* Hero */}
@@ -53,25 +95,31 @@ export default async function DashboardPage() {
           <h1 className="font-serif font-normal text-4xl lg:text-[52px] leading-[1.05] tracking-tight text-ohe-slate-900">
             {adminFirstName ? `Bonjour ${adminFirstName},` : 'Bonjour,'}
             <br />
-            <em className="italic text-ohe-blue">pilotez votre équipe.</em>
+            <em className="italic text-ohe-blue">
+              {isSupervisor ? 'suivez vos participants.' : 'pilotez votre équipe.'}
+            </em>
           </h1>
           <p className="mt-5 text-base lg:text-lg text-ohe-slate-600 leading-relaxed max-w-xl">
-            Vue d&apos;ensemble de l&apos;activité diagnostic de {org.name}.
+            {isSupervisor
+              ? `Vue d'ensemble des participants de vos groupes chez ${org.name}.`
+              : `Vue d'ensemble de l'activité diagnostic de ${org.name}.`}
           </p>
         </div>
 
         {/* Stats grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+          {!isSupervisor && (
+            <KpiCard
+              label="Crédits restants"
+              value={String(org.credits)}
+              hint="tests disponibles"
+              accent="blue"
+            />
+          )}
           <KpiCard
-            label="Crédits restants"
-            value={String(org.credits)}
-            hint="tests disponibles"
-            accent="blue"
-          />
-          <KpiCard
-            label="Collaborateurs"
+            label="Participants"
             value={String(totalUsers)}
-            hint="au total"
+            hint={isSupervisor ? 'dans vos groupes' : 'au total'}
             accent="slate"
           />
           <KpiCard
@@ -96,13 +144,14 @@ export default async function DashboardPage() {
                 ✱ Inviter
               </p>
               <h2 className="font-serif text-2xl lg:text-[28px] tracking-tight leading-tight text-ohe-slate-900">
-                Ajoutez un nouveau <em className="italic text-ohe-blue">collaborateur.</em>
+                Ajoutez un nouveau <em className="italic text-ohe-blue">participant.</em>
               </h2>
               <p className="mt-2 text-sm text-ohe-slate-600 max-w-md">
                 Un lien d&apos;activation lui sera envoyé pour créer son compte et passer le diagnostic.
               </p>
             </div>
-            <InviteCollabButton />
+            <InviteCollabButton userRole={session.user.role} groups={groups} />
+
           </div>
         </div>
 
@@ -121,7 +170,7 @@ export default async function DashboardPage() {
                     Gestion
                   </p>
                   <h3 className="font-serif text-xl text-ohe-slate-900 mb-1.5 leading-tight">
-                    Vos collaborateurs
+                    Vos participants
                   </h3>
                   <p className="text-sm text-ohe-slate-600">
                     Suivre les passages, voir les résultats, gérer les sessions.
@@ -155,8 +204,8 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Alerte crédits */}
-        {org.credits === 0 && (
+        {/* Alerte crédits (masquée pour superviseur) */}
+        {!isSupervisor && org.credits === 0 && (
           <div className="mt-6 p-5 bg-ohe-orange/5 border border-ohe-orange/30 rounded-2xl flex items-start gap-4">
             <div className="w-10 h-10 rounded-xl bg-ohe-orange/15 text-ohe-orange flex items-center justify-center flex-shrink-0">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -168,7 +217,7 @@ export default async function DashboardPage() {
                 Crédits épuisés
               </p>
               <p className="text-sm text-ohe-slate-900">
-                Plus aucun crédit disponible pour inviter de nouveaux collaborateurs.{' '}
+                Plus aucun crédit disponible pour inviter de nouveaux participants.{' '}
                 <span className="text-ohe-slate-600">
                   Contactez l&apos;équipe OHé pour recharger votre compte.
                 </span>
@@ -191,9 +240,9 @@ interface KpiCardProps {
 
 function KpiCard({ label, value, hint, accent }: KpiCardProps) {
   const accentColor = {
-    blue:   'text-ohe-blue',
-    slate:  'text-ohe-slate-900',
-    green:  'text-emerald-600',
+    blue: 'text-ohe-blue',
+    slate: 'text-ohe-slate-900',
+    green: 'text-emerald-600',
     orange: 'text-ohe-orange',
   }[accent];
 
@@ -209,4 +258,3 @@ function KpiCard({ label, value, hint, accent }: KpiCardProps) {
     </div>
   );
 }
-

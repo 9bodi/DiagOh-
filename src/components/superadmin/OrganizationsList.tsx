@@ -27,6 +27,7 @@ export default function OrganizationsList({ organizations }: { organizations: Or
   const [deleteOrg, setDeleteOrg] = useState<Org | null>(null);
   const [confirmName, setConfirmName] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
 
   async function handleDelete() {
     if (!deleteOrg) return;
@@ -62,6 +63,33 @@ export default function OrganizationsList({ organizations }: { organizations: Or
     setConfirmName('');
   }
 
+  async function handleImpersonate(org: Org) {
+  setImpersonatingId(org.id);
+  try {
+    const res = await fetch('/api/superadmin/impersonate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ organizationId: org.id }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      setImpersonatingId(null);
+      toast.error(data.error ?? 'Erreur lors de l\'accès à l\'organisation.');
+      return;
+    }
+
+    toast.success(`Connexion à ${org.name}`);
+    // Navigation dans le même onglet
+    window.location.href = data.redirectUrl ?? '/dashboard';
+  } catch (e) {
+    console.error(e);
+    setImpersonatingId(null);
+    toast.error('Erreur réseau.');
+  }
+}
+
+
   return (
     <>
       <div className="flex items-center justify-between mb-6">
@@ -95,13 +123,22 @@ export default function OrganizationsList({ organizations }: { organizations: Or
                     <span>✅ {org.completedTests} test{org.completedTests > 1 ? 's' : ''} terminé{org.completedTests > 1 ? 's' : ''}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <div className="text-right">
                     <div className="text-2xl font-bold text-ohe-blue">{org.credits}</div>
                     <div className="text-xs text-ohe-slate-500">crédits</div>
                   </div>
                   <Button variant="secondary" size="sm" onClick={() => setCreditOrg(org)}>
                     + Crédits
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleImpersonate(org)}
+                    loading={impersonatingId === org.id}
+                    disabled={impersonatingId !== null}
+                  >
+                    Accéder
                   </Button>
                   <Link href={`/organizations/${org.id}`}>
                     <Button variant="ghost" size="sm">Détails →</Button>
@@ -159,12 +196,7 @@ export default function OrganizationsList({ organizations }: { organizations: Or
             />
 
             <div className="flex gap-3 mt-6">
-              <Button
-                variant="secondary"
-                fullWidth
-                onClick={closeDeleteModal}
-                disabled={deleting}
-              >
+              <Button variant="secondary" fullWidth onClick={closeDeleteModal} disabled={deleting}>
                 Annuler
               </Button>
               <Button

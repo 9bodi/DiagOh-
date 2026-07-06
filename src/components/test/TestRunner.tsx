@@ -86,27 +86,38 @@ export default function TestRunner({ userName }: { userName: string }) {
   }, []);
 
   // 3. Récupère la question suivante
-  const fetchNextQuestion = useCallback(async () => {
-    try {
-      const res = await fetch('/api/test/question');
-      if (res.status === 404) {
-        await completeTest();
-        return;
-      }
-      const payload = await res.json();
-      if (payload.finished) {
-        await completeTest();
-        return;
-      }
-      setData(payload);
-      setSelectedIndex(null);
-      questionStartRef.current = Date.now();
-    } catch (e) {
-      console.error(e);
-      setError('Erreur lors du chargement de la question.');
+const fetchNextQuestion = useCallback(async () => {
+  try {
+    const res = await fetch('/api/test/question');
+    
+    if (res.status === 404) {
+      await completeTest();
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    
+    // Deadline dépassée
+    if (res.status === 403) {
+      const data = await res.json();
+      if (data.expired) {
+        router.push('/welcome');
+        return;
+      }
+    }
+    
+    const payload = await res.json();
+    if (payload.finished) {
+      await completeTest();
+      return;
+    }
+    setData(payload);
+    setSelectedIndex(null);
+    questionStartRef.current = Date.now();
+  } catch (e) {
+    console.error(e);
+    setError('Erreur lors du chargement de la question.');
+  }
+}, []);
+
 
   // 4. Soumet une réponse (peut être null = timeout)
   const submitAnswer = useCallback(
@@ -127,13 +138,20 @@ export default function TestRunner({ userName }: { userName: string }) {
           }),
         });
         const result = await res.json();
-        setSubmitting(false);
+setSubmitting(false);
 
-        if (result.finished) {
-          await completeTest();
-        } else {
-          await fetchNextQuestion();
-        }
+// Deadline dépassée pendant le test
+if (result.expired) {
+  router.push('/welcome');
+  return;
+}
+
+if (result.finished) {
+  await completeTest();
+} else {
+  await fetchNextQuestion();
+}
+
       } catch (e) {
         console.error(e);
         setSubmitting(false);

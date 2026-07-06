@@ -38,17 +38,29 @@ export async function POST(request: Request) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      firstName,
-      lastName,
-      passwordHash,
-      passwordCreated: true,
-      magicLinkToken: null,
-      magicLinkExpiresAt: null,
-    },
-  });
+const updated = await prisma.user.update({
+  where: { id: user.id },
+  data: {
+    firstName,
+    lastName,
+    passwordHash,
+    passwordCreated: true,
+    magicLinkToken: null,
+    magicLinkExpiresAt: null,
+  },
+  select: { role: true },
+});
 
-  return NextResponse.json({ success: true });
+const readySession = await prisma.testSession.findFirst({
+  where: { userId: user.id, status: 'READY_TO_START' },
+  select: { id: true },
+});
+
+return NextResponse.json({
+  success: true,
+  role: updated.role,
+  hasReadySession: !!readySession,
+});
+
+
 }

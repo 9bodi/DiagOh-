@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { canManageParticipant } from '@/lib/permissions';
 import { z } from 'zod';
 
 const schema = z.object({
@@ -10,7 +11,13 @@ const schema = z.object({
 export async function POST(request: Request) {
   const session = await auth();
 
-  if (!session?.user || session.user.role !== 'ADMIN') {
+  // 1) Auth étendue à SUPERADMIN et SUPERVISOR
+  if (
+    !session?.user ||
+    (session.user.role !== 'ADMIN' &&
+      session.user.role !== 'SUPERADMIN' &&
+      session.user.role !== 'SUPERVISOR')
+  ) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
@@ -22,6 +29,17 @@ export async function POST(request: Request) {
 
   const { userId } = parsed.data;
 
+  // 2) Vérification via canManageParticipant
+  const canAct = await canManageParticipant(
+    session.user.id,
+    session.user.role,
+    session.user.organizationId,
+    userId,
+  );
+  if (!canAct) {
+    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { organization: true },
@@ -31,14 +49,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
   }
 
-  if (user.organizationId !== session.user.organizationId) {
-    return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
-  }
-
+  // 3) On restreint la suppression aux participants (role USER)
+  // Un superviseur ne doit pas pouvoir supprimer un admin ou un autre superviseur.
   if (user.role !== 'USER') {
     return NextResponse.json(
-      { error: 'Seuls les collaborateurs peuvent être supprimés ici.' },
-      { status: 400 }
+      { error: 'Seuls les participants peuvent être supprimés ici.' },
+      { status: 400 },
     );
   }
 

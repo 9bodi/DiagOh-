@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import AdminHeader from '@/components/admin/AdminHeader';
+import { getAccessibleGroupIds } from '@/lib/permissions';
 
 // ============ Métadonnées ============
 const LEVEL_META: Record<string, { name: string; bar: string; badge: string }> = {
@@ -11,7 +12,6 @@ const LEVEL_META: Record<string, { name: string; bar: string; badge: string }> =
   C:  { name: 'Niveau C · Expert',         bar: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700' },
 };
 
-// Quadrants alignés CDC v3
 const QUADRANT_META: Record<number, { label: string; desc: string }> = {
   1: { label: 'À former en priorité',     desc: 'Adapté · Intéressé' },
   2: { label: 'À sensibiliser',           desc: 'Adapté · Non intéressé' },
@@ -29,14 +29,22 @@ const BLOCKS = [
 ] as const;
 
 function scoreToLabel(score: number): { label: string; tone: 'strong' | 'mid' | 'low' } {
-  if (score >= 0.75) return { label: 'Maîtrisé',                tone: 'strong' };
-  if (score >= 0.5)  return { label: 'Fragile',                 tone: 'mid' };
-  return                 { label: 'Non maîtrisé',               tone: 'low' };
+  if (score >= 0.75) return { label: 'Maîtrisé',      tone: 'strong' };
+  if (score >= 0.5)  return { label: 'Fragile',       tone: 'mid' };
+  return                 { label: 'Non maîtrisé',     tone: 'low' };
 }
 
 export default async function ResultsPage() {
   const session = await auth();
-  if (!session || session.user.role !== 'ADMIN') redirect('/login');
+
+  if (
+    !session ||
+    (session.user.role !== 'ADMIN' &&
+      session.user.role !== 'SUPERADMIN' &&
+      session.user.role !== 'SUPERVISOR')
+  ) {
+    redirect('/login');
+  }
 
   const orgId = session.user.organizationId;
   if (!orgId) redirect('/login');
@@ -44,9 +52,29 @@ export default async function ResultsPage() {
   const org = await prisma.organization.findUnique({ where: { id: orgId } });
   if (!org) redirect('/login');
 
-  // ===== Sessions COMPLETED de l'orga =====
+  const isSupervisor = session.user.role === 'SUPERVISOR';
+
+  // ===== Filtrage par rôle =====
+  let userFilter: any = { organizationId: orgId };
+
+  if (isSupervisor) {
+    const accessibleGroupIds = await getAccessibleGroupIds(
+      session.user.id,
+      session.user.role,
+      orgId,
+    );
+    userFilter = {
+      organizationId: orgId,
+      groupId: { in: accessibleGroupIds },
+    };
+  }
+
+  // ===== Sessions COMPLETED de l'orga (filtrées si superviseur) =====
   const completedSessions = await prisma.testSession.findMany({
-    where: { status: 'COMPLETED', user: { organizationId: orgId } },
+    where: {
+      status: 'COMPLETED',
+      user: userFilter,
+    },
     include: { user: true },
   });
 
@@ -74,16 +102,19 @@ export default async function ResultsPage() {
     return { ...b, avg };
   });
 
-  // Niveau dominant
   const dominantLevel = Object.entries(levelCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—';
 
   return (
     <main className="min-h-screen bg-ohe-slate-50">
-      <AdminHeader
-        userName={session.user.name ?? ''}
-        orgName={org.name}
-        currentPath="/results"
-      />
+     <AdminHeader
+  userName={session.user.name ?? session.user.email}
+  orgName={org.name}
+  currentPath="/results"
+  userRole={session.user.role}
+  isImpersonating={session.user.isImpersonating}
+/>
+
+
 
       <div className="max-w-6xl mx-auto px-6 py-10">
         {/* Hero */}
@@ -96,8 +127,12 @@ export default async function ResultsPage() {
           </h1>
           <p className="mt-4 text-base text-ohe-slate-600 leading-relaxed">
             {total === 0
-              ? `Aucun diagnostic complété pour le moment chez ${org.name}.`
-              : `${total} diagnostic${total > 1 ? 's' : ''} complété${total > 1 ? 's' : ''} chez ${org.name}.`}
+              ? isSupervisor
+                ? `Aucun diagnostic complété pour le moment dans vos groupes.`
+                : `Aucun diagnostic complété pour le moment chez ${org.name}.`
+              : isSupervisor
+                ? `${total} diagnostic${total > 1 ? 's' : ''} complété${total > 1 ? 's' : ''} dans vos groupes chez ${org.name}.`
+                : `${total} diagnostic${total > 1 ? 's' : ''} complété${total > 1 ? 's' : ''} chez ${org.name}.`}
           </p>
         </div>
 
@@ -143,11 +178,7 @@ export default async function ResultsPage() {
             {/* Répartition CECRL */}
             <Section
               kicker="✱ Niveau global"
-              title={
-                <>
-                  Répartition <em className="italic text-ohe-blue">CECRL.</em>
-                </>
-              }
+              title={<>Répartition <em className="italic text-ohe-blue">CECRL.</em></>}
             >
               <div className="space-y-3.5">
                 {(['A', 'B1', 'B2', 'C'] as const).map(level => {
@@ -182,11 +213,7 @@ export default async function ResultsPage() {
             {/* Moyenne par bloc */}
             <Section
               kicker="✱ Compétences"
-              title={
-                <>
-                  Maîtrise moyenne <em className="italic text-ohe-blue">par bloc.</em>
-                </>
-              }
+              title={<>Maîtrise moyenne <em className="italic text-ohe-blue">par bloc.</em></>}
               subtitle="Repérez les blocs à renforcer collectivement."
             >
               <div className="space-y-3.5">
@@ -194,17 +221,13 @@ export default async function ResultsPage() {
                   const meta = scoreToLabel(b.avg);
                   const pct = Math.round(b.avg * 100);
                   const barClass =
-                    meta.tone === 'strong'
-                      ? 'bg-emerald-500'
-                      : meta.tone === 'mid'
-                      ? 'bg-ohe-orange'
-                      : 'bg-red-400';
+                    meta.tone === 'strong' ? 'bg-emerald-500'
+                    : meta.tone === 'mid'  ? 'bg-ohe-orange'
+                    : 'bg-red-400';
                   const qualClass =
-                    meta.tone === 'strong'
-                      ? 'text-emerald-700'
-                      : meta.tone === 'mid'
-                      ? 'text-ohe-orange'
-                      : 'text-red-600';
+                    meta.tone === 'strong' ? 'text-emerald-700'
+                    : meta.tone === 'mid'  ? 'text-ohe-orange'
+                    : 'text-red-600';
                   return (
                     <div key={b.num}>
                       <div className="flex items-center justify-between mb-1.5">
@@ -240,11 +263,7 @@ export default async function ResultsPage() {
             {/* Matrice 2x2 — Quadrants */}
             <Section
               kicker="✱ Profil déclaratif"
-              title={
-                <>
-                  Matrice <em className="italic text-ohe-blue">intérêt / pertinence.</em>
-                </>
-              }
+              title={<>Matrice <em className="italic text-ohe-blue">intérêt / pertinence.</em></>}
               subtitle="Basée sur les réponses déclaratives. Utile pour cibler vos actions de formation."
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -253,13 +272,10 @@ export default async function ResultsPage() {
                   const count = quadrantCounts[q];
                   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
                   const tone =
-                    q === 1
-                      ? 'bg-emerald-50 border-emerald-100 text-emerald-900'
-                      : q === 2
-                      ? 'bg-ohe-blue/[0.05] border-ohe-blue/15 text-ohe-blue'
-                      : q === 3
-                      ? 'bg-ohe-orange/[0.06] border-ohe-orange/20 text-ohe-orange'
-                      : 'bg-ohe-slate-50 border-ohe-slate-200 text-ohe-slate-700';
+                    q === 1 ? 'bg-emerald-50 border-emerald-100 text-emerald-900'
+                    : q === 2 ? 'bg-ohe-blue/[0.05] border-ohe-blue/15 text-ohe-blue'
+                    : q === 3 ? 'bg-ohe-orange/[0.06] border-ohe-orange/20 text-ohe-orange'
+                    : 'bg-ohe-slate-50 border-ohe-slate-200 text-ohe-slate-700';
                   return (
                     <div key={q} className={`p-5 rounded-2xl border ${tone}`}>
                       <p className="font-mono text-[10px] tracking-[0.14em] uppercase opacity-80 mb-2">
@@ -288,13 +304,7 @@ export default async function ResultsPage() {
 
 // ============ Sub-components ============
 
-function KpiCard({
-  label,
-  value,
-  suffix,
-  hint,
-  accent,
-}: {
+function KpiCard({ label, value, suffix, hint, accent }: {
   label: string;
   value: string;
   suffix?: string;
@@ -313,21 +323,14 @@ function KpiCard({
       </p>
       <p className={`font-serif text-4xl lg:text-[44px] leading-none ${accentColor}`}>
         {value}
-        {suffix && (
-          <span className="text-base text-ohe-slate-400 font-normal ml-2">{suffix}</span>
-        )}
+        {suffix && <span className="text-base text-ohe-slate-400 font-normal ml-2">{suffix}</span>}
       </p>
       <p className="text-xs text-ohe-slate-600 mt-3">{hint}</p>
     </div>
   );
 }
 
-function Section({
-  kicker,
-  title,
-  subtitle,
-  children,
-}: {
+function Section({ kicker, title, subtitle, children }: {
   kicker: string;
   title: React.ReactNode;
   subtitle?: string;
@@ -341,9 +344,7 @@ function Section({
       <h2 className="font-serif text-2xl lg:text-[28px] tracking-tight leading-tight text-ohe-slate-900 mb-1">
         {title}
       </h2>
-      {subtitle && (
-        <p className="text-sm text-ohe-slate-600 mb-6">{subtitle}</p>
-      )}
+      {subtitle && <p className="text-sm text-ohe-slate-600 mb-6">{subtitle}</p>}
       {!subtitle && <div className="mb-6" />}
       {children}
     </div>

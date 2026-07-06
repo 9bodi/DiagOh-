@@ -2,6 +2,7 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
+import { readImpersonationFromCookies } from './impersonation';
 import type { Role } from '@prisma/client';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -19,9 +20,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+        if (!credentials?.email || !credentials?.password) return null;
 
         const email = String(credentials.email).toLowerCase();
         const password = String(credentials.password);
@@ -58,12 +57,39 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as Role;
-        session.user.organizationId = token.organizationId as string | null;
-        session.user.organizationName = token.organizationName as string | null;
+      if (!session.user) return session;
+
+      // Contexte normal
+      session.user.id = token.id as string;
+      session.user.role = token.role as Role;
+      session.user.organizationId = token.organizationId as string | null;
+      session.user.organizationName = token.organizationName as string | null;
+
+      // Impersonation : uniquement si l'utilisateur est SUPERADMIN
+      if (session.user.role === 'SUPERADMIN') {
+        try {
+          const impersonation = await readImpersonationFromCookies();
+          if (impersonation && impersonation.superadminId === session.user.id) {
+            // Charge l'organisation cible
+            const org = await prisma.organization.findUnique({
+              where: { id: impersonation.organizationId },
+              select: { id: true, name: true },
+            });
+            if (org) {
+              // Sauvegarde le contexte réel puis surcharge
+              session.user.actualRole = session.user.role;
+              session.user.actualOrganizationId = session.user.organizationId;
+              session.user.role = 'ADMIN' as Role;
+              session.user.organizationId = org.id;
+              session.user.organizationName = org.name;
+              session.user.isImpersonating = true;
+            }
+          }
+        } catch (e) {
+          console.error('Erreur lecture impersonation:', e);
+        }
       }
+
       return session;
     },
   },

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { TestStatus } from '@prisma/client';
-import { buildQuestionsOrder, getActiveSession, getCompletedSession } from '@/lib/test-session';
+import { buildQuestionsOrder } from '@/lib/test-session';
+import { isSessionExpired } from '@/lib/deadline';
 
 export async function POST() {
   const session = await auth();
@@ -13,36 +14,77 @@ export async function POST() {
 
   const userId = session.user.id;
 
-  // 1. Si une session est déjà complétée → refuse
-  const completed = await getCompletedSession(userId);
-  if (completed) {
+  // Récupère la session la plus récente
+  const testSession = await prisma.testSession.findFirst({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Cas 1 : aucune session → l'user n'a pas été invité correctement
+  if (!testSession) {
     return NextResponse.json(
-      { error: 'Test already completed', sessionId: completed.id },
+      { error: 'Aucune session de test. Contactez votre encadrant.' },
+      { status: 403 }
+    );
+  }
+
+  // Cas 2 : déjà terminée
+  if (testSession.status === TestStatus.COMPLETED) {
+    return NextResponse.json(
+      { error: 'Test already completed', sessionId: testSession.id },
       { status: 409 }
     );
   }
 
-  // 2. Si une session est en cours → on la reprend
-  const active = await getActiveSession(userId);
-  if (active) {
+  // Cas 3 : deadline dépassée → on expire
+  if (isSessionExpired(testSession)) {
+    await prisma.testSession.update({
+      where: { id: testSession.id },
+      data: { status: TestStatus.EXPIRED, expiredAt: new Date() },
+    });
+    return NextResponse.json(
+      { error: 'Deadline dépassée. Contactez votre encadrant pour une prolongation.' },
+      { status: 403 }
+    );
+  }
+
+  // Cas 4 : en attente d'activation par l'admin
+  if (testSession.status === TestStatus.PENDING) {
+    return NextResponse.json(
+      { error: 'Votre diagnostic n\'a pas encore été activé par votre encadrant.' },
+      { status: 403 }
+    );
+  }
+
+  // Cas 5 : déjà expirée (statut posé auparavant)
+  if (testSession.status === TestStatus.EXPIRED) {
+    return NextResponse.json(
+      { error: 'Deadline dépassée. Contactez votre encadrant pour une prolongation.' },
+      { status: 403 }
+    );
+  }
+
+  // Cas 6 : en cours → on reprend telle quelle
+  if (testSession.status === TestStatus.IN_PROGRESS) {
     return NextResponse.json({
-      sessionId: active.id,
+      sessionId: testSession.id,
       resumed: true,
-      currentQuestionIndex: active.currentQuestionIndex,
-      questionsOrder: active.questionsOrder,
+      currentQuestionIndex: testSession.currentQuestionIndex,
+      questionsOrder: testSession.questionsOrder,
     });
   }
 
-  // 3. Sinon, on en crée une nouvelle
+  // Cas 7 : READY_TO_START → on démarre pour de vrai
+  // On génère l'ordre des questions et on passe en IN_PROGRESS
   const questionsOrder = await buildQuestionsOrder();
 
   if (questionsOrder.length === 0) {
     return NextResponse.json({ error: 'No questions available' }, { status: 500 });
   }
 
-  const newSession = await prisma.testSession.create({
+  const updatedSession = await prisma.testSession.update({
+    where: { id: testSession.id },
     data: {
-      userId,
       status: TestStatus.IN_PROGRESS,
       currentQuestionIndex: 0,
       questionsOrder: questionsOrder,
@@ -51,7 +93,7 @@ export async function POST() {
   });
 
   return NextResponse.json({
-    sessionId: newSession.id,
+    sessionId: updatedSession.id,
     resumed: false,
     currentQuestionIndex: 0,
     questionsOrder,

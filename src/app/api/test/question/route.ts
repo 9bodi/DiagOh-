@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getActiveSession } from '@/lib/test-session';
+import { isSessionExpired } from '@/lib/deadline';
 
 export async function GET() {
   const session = await auth();
@@ -12,6 +13,26 @@ export async function GET() {
   const testSession = await getActiveSession(session.user.id);
   if (!testSession) {
     return NextResponse.json({ error: 'Aucune session active' }, { status: 404 });
+  }
+
+  // 🛡️ Garde-fou : vérifie la deadline
+  if (isSessionExpired(testSession)) {
+    await prisma.testSession.update({
+      where: { id: testSession.id },
+      data: { status: 'EXPIRED', expiredAt: new Date() },
+    });
+    return NextResponse.json(
+      { error: 'Deadline dépassée. Test clôturé.', expired: true },
+      { status: 403 }
+    );
+  }
+
+  // 🛡️ Garde-fou : statut doit être IN_PROGRESS
+  if (testSession.status !== 'IN_PROGRESS') {
+    return NextResponse.json(
+      { error: 'Session non démarrée ou déjà terminée.' },
+      { status: 403 }
+    );
   }
 
   const questionsOrder = testSession.questionsOrder as string[];

@@ -45,29 +45,32 @@ export default function CreatePasswordForm({ token, email }: Props) {
       body: JSON.stringify({ token, firstName, lastName, password }),
     });
 
-    const data = await res.json();
+const data = await res.json();
+if (!res.ok) {
+  setError(data.error || 'Une erreur est survenue.');
+  setLoading(false);
+  return;
+}
 
-    if (!res.ok) {
-      setError(data.error || 'Une erreur est survenue.');
-      setLoading(false);
-      return;
-    }
+// Auto-login
+const result = await signIn('credentials', { email, password, redirect: false });
+if (result?.error) {
+  setError('Compte créé mais connexion impossible. Allez sur /login.');
+  setLoading(false);
+  return;
+}
 
-    // Auto-login
-    const result = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-    });
+const role = data.role;
+if (role === 'ADMIN' || role === 'SUPERADMIN' || role === 'SUPERVISOR') {
+  router.push('/users');
+} else if (data.hasReadySession) {
+  router.push('/welcome'); // /welcome détectera READY_TO_START et proposera de commencer
+} else {
+  router.push('/welcome'); // écran d'attente classique
+}
+router.refresh();
 
-    if (result?.error) {
-      setError('Compte créé mais connexion impossible. Allez sur /login.');
-      setLoading(false);
-      return;
-    }
 
-    router.push('/welcome');
-    router.refresh();
   };
 
   return (

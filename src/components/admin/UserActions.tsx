@@ -12,6 +12,8 @@ interface UserActionsProps {
   sessionId: string | null;
   organizationCredits: number;
   passwordCreated: boolean;
+  canEditDeadline?: boolean;
+  onEditDeadline?: () => void;
 }
 
 export default function UserActions({
@@ -21,6 +23,8 @@ export default function UserActions({
   sessionId,
   organizationCredits,
   passwordCreated,
+  canEditDeadline,
+  onEditDeadline,
 }: UserActionsProps) {
   const router = useRouter();
   const [resetModalOpen, setResetModalOpen] = useState(false);
@@ -44,12 +48,17 @@ export default function UserActions({
       });
       const data = await res.json();
       setLoading(false);
-      if (!res.ok) { toast.error(data.error ?? 'Erreur lors du reset.'); return; }
+      if (!res.ok) {
+        toast.error(data.error ?? 'Erreur lors du reset.');
+        return;
+      }
       toast.success(`Test de ${userName} réinitialisé`);
       setResetModalOpen(false);
       router.refresh();
     } catch (e) {
-      console.error(e); setLoading(false); toast.error('Erreur réseau.');
+      console.error(e);
+      setLoading(false);
+      toast.error('Erreur réseau.');
     }
   }
 
@@ -63,10 +72,15 @@ export default function UserActions({
       });
       const data = await res.json();
       setResending(false);
-      if (!res.ok) { toast.error(data.error ?? 'Erreur lors du renvoi.'); return; }
+      if (!res.ok) {
+        toast.error(data.error ?? 'Erreur lors du renvoi.');
+        return;
+      }
       toast.success(`Invitation renvoyée à ${userName}`);
     } catch (e) {
-      console.error(e); setResending(false); toast.error('Erreur réseau.');
+      console.error(e);
+      setResending(false);
+      toast.error('Erreur réseau.');
     }
   }
 
@@ -80,13 +94,18 @@ export default function UserActions({
       });
       const data = await res.json();
       setLoading(false);
-      if (!res.ok) { toast.error(data.error ?? 'Erreur lors de la suppression.'); return; }
+      if (!res.ok) {
+        toast.error(data.error ?? 'Erreur lors de la suppression.');
+        return;
+      }
       if (data.refunded) toast.success(`${userName} supprimé · 1 crédit remboursé`);
       else toast.success(`${userName} supprimé`);
       setDeleteModalOpen(false);
       router.refresh();
     } catch (e) {
-      console.error(e); setLoading(false); toast.error('Erreur réseau.');
+      console.error(e);
+      setLoading(false);
+      toast.error('Erreur réseau.');
     }
   }
 
@@ -96,6 +115,11 @@ export default function UserActions({
         {canResend && (
           <ActionLink onClick={handleResend} disabled={resending} tone="blue" title="Renvoyer l'invitation">
             {resending ? '…' : 'Renvoyer'}
+          </ActionLink>
+        )}
+        {canEditDeadline && onEditDeadline && (
+          <ActionLink onClick={onEditDeadline} tone="blue" title="Modifier la date limite">
+            Deadline
           </ActionLink>
         )}
         {canDownloadPdf && (
@@ -114,7 +138,7 @@ export default function UserActions({
             Reset
           </ActionLink>
         )}
-        <ActionLink onClick={() => setDeleteModalOpen(true)} tone="red" title="Supprimer le collaborateur">
+        <ActionLink onClick={() => setDeleteModalOpen(true)} tone="red" title="Supprimer le participant">
           Supprimer
         </ActionLink>
       </div>
@@ -169,19 +193,19 @@ export default function UserActions({
           <ModalTitle>Supprimer {userName} ?</ModalTitle>
 
           <p className="text-sm text-ohe-slate-600 leading-relaxed mb-4">
-            Cette action est <strong className="text-ohe-slate-900">définitive</strong>. Le collaborateur, son test et toutes ses réponses seront supprimés.
+            Cette action est <strong className="text-ohe-slate-900">définitive</strong>. Le participant, son test et toutes ses réponses seront supprimés.
           </p>
 
           {willRefundOnDelete ? (
             <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-lg mb-4">
               <p className="text-sm text-emerald-800">
-                Ce collaborateur n&apos;a pas activé son compte. <strong>1 crédit sera remboursé</strong> à votre organisation.
+                Ce participant n&apos;a pas activé son compte. <strong>1 crédit sera remboursé</strong> à votre organisation.
               </p>
             </div>
           ) : (
             <div className="p-3 bg-ohe-orange/5 border border-ohe-orange/20 rounded-lg mb-4">
               <p className="text-sm text-ohe-slate-900">
-                Ce collaborateur a déjà activé son compte. <strong>Aucun crédit ne sera remboursé.</strong>
+                Ce participant a déjà activé son compte. <strong>Aucun crédit ne sera remboursé.</strong>
               </p>
             </div>
           )}

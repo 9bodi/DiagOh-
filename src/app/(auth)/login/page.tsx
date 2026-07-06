@@ -37,12 +37,13 @@ export default function LoginPage() {
     const session = await getSession();
 
     if (session?.user?.role === 'SUPERADMIN') {
-      router.push('/organizations');
-    } else if (session?.user?.role === 'ADMIN') {
-      router.push('/dashboard');
-    } else {
-      router.push('/welcome');
-    }
+  router.push('/organizations');
+} else if (session?.user?.role === 'ADMIN' || session?.user?.role === 'SUPERVISOR') {
+  router.push('/users');
+} else {
+  router.push('/welcome');
+}
+
     router.refresh();
   }
 

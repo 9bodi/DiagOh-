@@ -14,15 +14,19 @@ datasource db {
 enum Role {
   SUPERADMIN
   ADMIN
+  SUPERVISOR
   USER
 }
 
+
 enum TestStatus {
-  NOT_STARTED
-  IN_PROGRESS
-  COMPLETED
-  RESET
+  PENDING          // Compte créé, pas encore activé par l'admin
+  READY_TO_START   // Activé par l'admin, en attente que l'user commence
+  IN_PROGRESS      // Test en cours
+  COMPLETED        // Test terminé
+  EXPIRED          // Deadline dépassée sans complétion
 }
+
 
 enum QuestionType {
   PROCEDURAL
@@ -61,8 +65,26 @@ model Organization {
   updatedAt           DateTime            @updatedAt
 
   users               User[]
+  groups              Group[]           // ← NOUVEAU
   creditTransactions  CreditTransaction[]
 }
+
+
+model Group {
+  id              String       @id @default(cuid())
+  name            String
+  organizationId  String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  participants    User[]       @relation("GroupParticipants")
+  supervisors     User[]       @relation("GroupSupervisors")
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+}
+
 
 model User {
   id                  String        @id @default(cuid())
@@ -72,6 +94,7 @@ model User {
   lastName            String?
   role                Role          @default(USER)
   organizationId      String?
+  groupId             String?       // ← NOUVEAU (participants)
   magicLinkToken      String?       @unique
   magicLinkExpiresAt  DateTime?
   passwordCreated     Boolean       @default(false)
@@ -79,21 +102,32 @@ model User {
   updatedAt           DateTime      @updatedAt
 
   organization        Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  group               Group?        @relation("GroupParticipants", fields: [groupId], references: [id], onDelete: SetNull)  // ← NOUVEAU
+  supervisedGroups    Group[]       @relation("GroupSupervisors")  // ← NOUVEAU (superviseurs)
   testSessions        TestSession[]
 
   @@index([organizationId])
+  @@index([groupId])         // ← NOUVEAU
   @@index([magicLinkToken])
 }
+
 
 model TestSession {
   id                          String      @id @default(cuid())
   userId                      String
-  status                      TestStatus  @default(NOT_STARTED)
+  status                      TestStatus  @default(PENDING)
   currentQuestionIndex        Int         @default(0)
   questionsOrder              Json
   currentQuestionServedCount  Int         @default(0)
   startedAt                   DateTime?
   completedAt                 DateTime?
+
+  // Activation & deadline (nouveau flow)
+  deadline                    DateTime?
+  activatedAt                 DateTime?
+  activatedBy                 String?     // ID de l'admin qui a activé
+  reminderJ1SentAt            DateTime?
+  expiredAt                   DateTime?
 
   // Scores par bloc (procédural) — 0, 0.5, 0.75 ou 1
   scoreBloc1                  Float?
@@ -124,7 +158,9 @@ model TestSession {
 
   @@index([userId])
   @@index([status])
+  @@index([deadline])
 }
+
 
 model Question {
   id                  String           @id @default(cuid())
@@ -177,5 +213,18 @@ model CreditTransaction {
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
+  @@index([organizationId])
+}
+
+model ImpersonationLog {
+  id              String    @id @default(cuid())
+  superadminId    String
+  organizationId  String
+  startedAt       DateTime  @default(now())
+  endedAt         DateTime?
+  ipAddress       String?
+  userAgent       String?
+
+  @@index([superadminId])
   @@index([organizationId])
 }

@@ -10,6 +10,9 @@ declare module 'next-auth' {
       role: Role;
       organizationId: string | null;
       organizationName: string | null;
+      isImpersonating?: boolean;
+      actualRole?: Role;
+      actualOrganizationId?: string | null;
     };
   }
 

@@ -1,8 +1,10 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
 import Logo from '@/components/ui/Logo';
 import Button from '@/components/ui/Button';
+import { isSessionExpired } from '@/lib/deadline';
 
 export default async function RulesPage() {
   const session = await auth();
@@ -11,6 +13,33 @@ export default async function RulesPage() {
     redirect('/login');
   }
 
+  // Garde-fou : vérifier que le user a le droit de démarrer
+  const testSession = await prisma.testSession.findFirst({
+    where: { userId: session.user.id },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  // Pas de session → renvoie à welcome (qui affichera "En attente d'activation")
+  if (!testSession) {
+    redirect('/welcome');
+  }
+
+  // Déjà terminé → renvoie au résultat
+  if (testSession.status === 'COMPLETED') {
+    redirect('/result');
+  }
+
+  // En attente d'activation admin → renvoie à welcome
+  if (testSession.status === 'PENDING') {
+    redirect('/welcome');
+  }
+
+  // Deadline dépassée → renvoie à welcome (qui affichera "Deadline dépassée")
+  if (testSession.status === 'EXPIRED' || isSessionExpired(testSession)) {
+    redirect('/welcome');
+  }
+
+  // OK : READY_TO_START ou IN_PROGRESS → on affiche les règles
   return (
     <main className="min-h-screen bg-ohe-slate-50 flex items-center justify-center p-4 sm:p-8 lg:p-16">
       <div className="w-full max-w-6xl bg-white rounded-3xl border border-ohe-slate-200/60 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_24px_48px_-24px_rgba(15,23,42,0.18)] overflow-hidden grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] min-h-[640px]">
@@ -51,7 +80,6 @@ export default async function RulesPage() {
 
         {/* Right — indigo panel with rules */}
         <div className="relative p-10 lg:p-14 flex flex-col justify-center gap-7 bg-gradient-to-br from-ohe-indigo to-[#2A2580] text-white overflow-hidden">
-          {/* Subtle warm glow */}
           <div
             className="pointer-events-none absolute inset-0"
             style={{

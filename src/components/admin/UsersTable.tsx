@@ -1,25 +1,22 @@
 'use client';
 
 import UserActions from './UserActions';
+import {
+  getVisibleColumns,
+  type UserRow,
+  type ColumnKey,
+  type SortState,
+} from './table/userTableColumns';
 
-interface UserRow {
-  id: string;
-  email: string;
-  firstName: string | null;
-  lastName: string | null;
-  passwordCreated: boolean;
-  status: string;
-  level: string | null;
-  score: number | null;
-  completedAt: string | null;
-  sessionId: string | null;
-}
+export type { UserRow };
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
-  NOT_STARTED: { label: 'Pas commencé', className: 'bg-ohe-slate-100 text-ohe-slate-600' },
-  IN_PROGRESS: { label: 'En cours',     className: 'bg-ohe-orange/10 text-ohe-orange' },
-  COMPLETED:   { label: 'Terminé',      className: 'bg-emerald-50 text-emerald-700' },
-  RESET:       { label: 'Réinitialisé', className: 'bg-ohe-slate-100 text-ohe-slate-600' },
+  PENDING:        { label: 'En attente',   className: 'bg-ohe-slate-100 text-ohe-slate-600' },
+  READY_TO_START: { label: 'Prêt',         className: 'bg-ohe-blue/10 text-ohe-blue' },
+  IN_PROGRESS:    { label: 'En cours',     className: 'bg-ohe-orange/10 text-ohe-orange' },
+  COMPLETED:      { label: 'Terminé',      className: 'bg-emerald-50 text-emerald-700' },
+  EXPIRED:        { label: 'Expiré',       className: 'bg-red-50 text-red-700' },
+  RESET:          { label: 'Réinitialisé', className: 'bg-ohe-slate-100 text-ohe-slate-600' },
 };
 
 const LEVEL_BADGE: Record<string, string> = {
@@ -29,13 +26,23 @@ const LEVEL_BADGE: Record<string, string> = {
   C:  'bg-emerald-50 text-emerald-700',
 };
 
-export default function UsersTable({
-  users,
-  credits,
-}: {
+interface UsersTableProps {
   users: UserRow[];
+  filter: string;
   credits: number;
-}) {
+  selectedIds: string[];
+  sort: SortState | null;
+  onToggleSort: (key: ColumnKey) => void;
+  onToggleSelect: (userId: string) => void;
+  onToggleSelectAll: () => void;
+  onEditDeadline: (user: UserRow) => void;
+  onMoveGroup: (user: UserRow) => void;
+}
+
+export default function UsersTable({
+  users, filter, credits, selectedIds, sort,
+  onToggleSort, onToggleSelect, onToggleSelectAll, onEditDeadline, onMoveGroup,
+}: UsersTableProps) {
   if (users.length === 0) {
     return (
       <div className="p-16 text-center">
@@ -45,120 +52,95 @@ export default function UsersTable({
           </svg>
         </div>
         <p className="text-base font-semibold text-ohe-slate-900 mb-2">
-  Aucun collaborateur dans cette catégorie.
-</p>
-
+          Aucun participant dans cette catégorie.
+        </p>
         <p className="text-sm text-ohe-slate-600">
-          Cliquez sur « Inviter un collaborateur » pour démarrer.
+          Cliquez sur « Inviter un participant » pour démarrer.
         </p>
       </div>
     );
   }
+
+  const visibleColumns = getVisibleColumns(filter, users);
+
+  const selectableUsers = users.filter((u) => u.status === 'PENDING');
+  const allSelectableSelected =
+    selectableUsers.length > 0 &&
+    selectableUsers.every((u) => selectedIds.includes(u.id));
+  const someSelected = selectedIds.length > 0 && !allSelectableSelected;
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
         <thead>
           <tr className="border-b border-ohe-slate-200 bg-ohe-slate-50/60">
-            <Th>Collaborateur</Th>
-            <Th>Statut</Th>
-            <Th>Niveau</Th>
-            <Th>Score</Th>
-            <Th>Terminé le</Th>
-            <Th align="right">Actions</Th>
+            {visibleColumns.map((col) => {
+              const isSortable = !!col.sortable;
+              const isActiveSort = sort?.key === col.key;
+              const alignClass =
+                col.align === 'right' ? 'text-right' :
+                col.align === 'center' ? 'text-center' : 'text-left';
+              return (
+                <th
+                  key={col.key}
+                  className={`px-6 py-3 font-mono text-[10px] font-semibold text-ohe-slate-500 tracking-[0.14em] uppercase ${alignClass} ${col.width ?? ''}`}
+                >
+                  {col.key === 'select' ? (
+                    <Checkbox
+                      checked={allSelectableSelected}
+                      indeterminate={someSelected}
+                      onChange={onToggleSelectAll}
+                      disabled={selectableUsers.length === 0}
+                      ariaLabel="Tout sélectionner"
+                    />
+                  ) : col.key === 'actions' ? (
+                    ''
+                  ) : isSortable ? (
+                    <button
+                      type="button"
+                      onClick={() => onToggleSort(col.key)}
+                      className={`inline-flex items-center gap-1 hover:text-ohe-slate-900 transition-colors ${
+                        isActiveSort ? 'text-ohe-blue' : ''
+                      }`}
+                    >
+                      <span>{col.label}</span>
+                      <SortIcon direction={isActiveSort ? sort!.direction : null} />
+                    </button>
+                  ) : (
+                    col.label
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
           {users.map((u) => {
-            const statusInfo = STATUS_BADGE[u.status] ?? STATUS_BADGE.NOT_STARTED;
-            const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ') || '—';
-            const initials =
-              ((u.firstName?.[0] ?? '') + (u.lastName?.[0] ?? '')).toUpperCase() ||
-              u.email[0].toUpperCase();
-            const userNameForActions =
-              [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email;
-
+            const isSelected = selectedIds.includes(u.id);
             return (
               <tr
                 key={u.id}
-                className="border-b border-ohe-slate-100 last:border-b-0 hover:bg-ohe-slate-50/40 transition-colors"
+                className={`border-b border-ohe-slate-100 last:border-b-0 transition-colors ${
+                  isSelected ? 'bg-ohe-blue/[0.04]' : 'hover:bg-ohe-slate-50/40'
+                }`}
               >
-                {/* Collaborateur */}
-<td className="px-6 py-4">
-  <div className="min-w-0">
-    <p className="text-sm font-medium text-ohe-slate-900 truncate">{fullName}</p>
-    <p className="text-xs text-ohe-slate-600 truncate">{u.email}</p>
-  </div>
-</td>
-
-
-                {/* Statut */}
-                <td className="px-6 py-4">
-                  <div className="flex flex-wrap gap-1.5">
-                    <span
-                      className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium ${statusInfo.className}`}
-                    >
-                      {statusInfo.label}
-                    </span>
-                    {!u.passwordCreated && (
-                      <span className="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-700">
-                        En attente
-                      </span>
-                    )}
-                  </div>
-                </td>
-
-                {/* Niveau */}
-                <td className="px-6 py-4">
-                  {u.level ? (
-                    <span
-                      className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold ${LEVEL_BADGE[u.level] ?? ''}`}
-                    >
-                      {u.level}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-ohe-slate-300">—</span>
-                  )}
-                </td>
-
-                {/* Score */}
-                <td className="px-6 py-4">
-                  {u.score !== null ? (
-                    <span className="font-mono text-sm font-semibold text-ohe-slate-900">
-                      {u.score.toFixed(2).replace('.', ',')}
-                      <span className="text-ohe-slate-400 font-normal"> / 6</span>
-                    </span>
-                  ) : (
-                    <span className="text-sm text-ohe-slate-300">—</span>
-                  )}
-                </td>
-
-                {/* Terminé le */}
-                <td className="px-6 py-4">
-                  {u.completedAt ? (
-                    <span className="text-sm text-ohe-slate-600">
-                      {new Date(u.completedAt).toLocaleDateString('fr-FR', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-ohe-slate-300">—</span>
-                  )}
-                </td>
-
-                {/* Actions */}
-                <td className="px-6 py-4 text-right">
-                  <UserActions
-                    userId={u.id}
-                    userName={userNameForActions}
-                    status={u.status}
-                    sessionId={u.sessionId}
-                    organizationCredits={credits}
-                    passwordCreated={u.passwordCreated}
-                  />
-                </td>
+                {visibleColumns.map((col) => (
+                  <td
+                    key={col.key}
+                    className={`px-6 py-4 ${
+                      col.align === 'center' ? 'text-center' :
+                      col.align === 'right'  ? 'text-right'  : ''
+                    }`}
+                  >
+                    {renderCell(col.key, u, {
+                      credits,
+                      selectedIds,
+                      onToggleSelect,
+                      onEditDeadline,
+                      onMoveGroup,
+                    })}
+                  </td>
+                ))}
               </tr>
             );
           })}
@@ -168,17 +150,198 @@ export default function UsersTable({
   );
 }
 
-// ============ Th cell ============
-function Th({ children, align = 'left' }: { children: React.ReactNode; align?: 'left' | 'right' }) {
+interface CellContext {
+  credits: number;
+  selectedIds: string[];
+  onToggleSelect: (id: string) => void;
+  onEditDeadline: (u: UserRow) => void;
+  onMoveGroup: (u: UserRow) => void;
+}
+
+function renderCell(key: ColumnKey, u: UserRow, ctx: CellContext) {
+  const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ') || '—';
+  const userNameForActions = [u.firstName, u.lastName].filter(Boolean).join(' ') || u.email;
+  const isSelectable = u.status === 'PENDING';
+  const isSelected = ctx.selectedIds.includes(u.id);
+  const canEditDeadline =
+    u.status === 'READY_TO_START' || u.status === 'IN_PROGRESS' || u.status === 'EXPIRED';
+  const statusInfo = STATUS_BADGE[u.status] ?? STATUS_BADGE.PENDING;
+
+  switch (key) {
+    case 'select':
+      return (
+        <Checkbox
+          checked={isSelected}
+          onChange={() => ctx.onToggleSelect(u.id)}
+          disabled={!isSelectable}
+          ariaLabel={`Sélectionner ${fullName}`}
+        />
+      );
+
+    case 'participant':
+      return (
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-ohe-slate-900 truncate">{fullName}</p>
+          <p className="text-xs text-ohe-slate-600 truncate">{u.email}</p>
+        </div>
+      );
+
+    case 'group':
+      return (
+        <button
+          type="button"
+          onClick={() => ctx.onMoveGroup(u)}
+          className="inline-flex items-center gap-1.5 text-sm text-ohe-slate-700 hover:text-ohe-blue transition-colors"
+          title="Modifier le groupe"
+        >
+          {u.groupName ? (
+            <span className="px-2 py-0.5 bg-ohe-slate-100 hover:bg-ohe-blue/[0.08] rounded-md text-[11px] font-medium transition-colors">
+              {u.groupName}
+            </span>
+          ) : (
+            <span className="text-[11px] text-ohe-slate-400 hover:text-ohe-blue italic">
+              Assigner…
+            </span>
+          )}
+        </button>
+      );
+
+    case 'status':
+      return (
+        <div className="flex flex-wrap gap-1.5">
+          <span className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium ${statusInfo.className}`}>
+            {statusInfo.label}
+          </span>
+          {!u.passwordCreated && (
+            <span className="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-700">
+              Non inscrit
+            </span>
+          )}
+        </div>
+      );
+
+    case 'deadline':
+      return u.deadline ? (
+        <button
+          type="button"
+          onClick={() => canEditDeadline && ctx.onEditDeadline(u)}
+          disabled={!canEditDeadline}
+          className={`text-sm ${
+            canEditDeadline
+              ? 'text-ohe-slate-700 hover:text-ohe-blue hover:underline cursor-pointer'
+              : 'text-ohe-slate-500 cursor-default'
+          }`}
+        >
+          {formatDeadline(u.deadline)}
+        </button>
+      ) : (
+        <span className="text-sm text-ohe-slate-300">—</span>
+      );
+
+    case 'level':
+      return u.level ? (
+        <span className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold ${LEVEL_BADGE[u.level] ?? ''}`}>
+          {u.level}
+        </span>
+      ) : (
+        <span className="text-sm text-ohe-slate-300">—</span>
+      );
+
+    case 'score':
+      return u.score !== null ? (
+        <span className="font-mono text-sm font-semibold text-ohe-slate-900">
+          {u.score.toFixed(2).replace('.', ',')}
+          <span className="text-ohe-slate-400 font-normal"> / 6</span>
+        </span>
+      ) : (
+        <span className="text-sm text-ohe-slate-300">—</span>
+      );
+
+    case 'quadrant':
+      return u.status === 'COMPLETED' && u.quadrant ? (
+        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-ohe-blue/10 text-ohe-blue font-semibold text-sm">
+          {u.quadrant}
+        </span>
+      ) : (
+        <span className="text-sm text-ohe-slate-300">—</span>
+      );
+
+    case 'completedAt':
+      return u.completedAt ? (
+        <span className="text-sm text-ohe-slate-600">
+          {new Date(u.completedAt).toLocaleDateString('fr-FR', {
+            day: '2-digit', month: 'short', year: 'numeric',
+          })}
+        </span>
+      ) : (
+        <span className="text-sm text-ohe-slate-300">—</span>
+      );
+
+    case 'actions':
+      return (
+        <UserActions
+          userId={u.id}
+          userName={userNameForActions}
+          status={u.status}
+          sessionId={u.sessionId}
+          organizationCredits={ctx.credits}
+          passwordCreated={u.passwordCreated}
+          canEditDeadline={canEditDeadline}
+          onEditDeadline={() => ctx.onEditDeadline(u)}
+        />
+      );
+
+    default:
+      return null;
+  }
+}
+
+function formatDeadline(iso: string): string {
+  const d = new Date(iso);
+  const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+  const timeStr = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h');
+  return `${dateStr} · ${timeStr}`;
+}
+
+function SortIcon({ direction }: { direction: 'asc' | 'desc' | null }) {
+  if (direction === null) {
+    return (
+      <svg className="w-3 h-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+      </svg>
+    );
+  }
+  return direction === 'asc' ? (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+    </svg>
+  ) : (
+    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+}
+
+interface CheckboxProps {
+  checked: boolean;
+  indeterminate?: boolean;
+  onChange: () => void;
+  disabled?: boolean;
+  ariaLabel?: string;
+}
+
+function Checkbox({ checked, indeterminate, onChange, disabled, ariaLabel }: CheckboxProps) {
   return (
-    <th
-      className={`
-        px-6 py-3 font-mono text-[10px] font-semibold text-ohe-slate-500
-        tracking-[0.14em] uppercase
-        ${align === 'right' ? 'text-right' : 'text-left'}
-      `}
-    >
-      {children}
-    </th>
+    <label className={`inline-flex items-center justify-center ${disabled ? 'cursor-not-allowed opacity-30' : 'cursor-pointer'}`}>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={onChange}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        ref={(el) => { if (el) el.indeterminate = !!indeterminate; }}
+        className="w-4 h-4 rounded border-ohe-slate-300 text-ohe-blue focus:ring-2 focus:ring-ohe-blue/30 focus:ring-offset-0 cursor-pointer disabled:cursor-not-allowed"
+      />
+    </label>
   );
 }
