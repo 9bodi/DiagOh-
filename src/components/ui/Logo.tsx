@@ -1,31 +1,48 @@
-import Link from 'next/link';
+import Image from "next/image";
+
+type LogoSize = number | "sm" | "md" | "lg";
 
 interface LogoProps {
+  size?: LogoSize;
+  withLabel?: boolean;
+  variant?: "default" | "white";
+  /** @deprecated Ancienne prop, ignorée */
   href?: string;
-  variant?: 'default' | 'white';
-  size?: 'sm' | 'md' | 'lg';
 }
 
-export default function Logo({ href = '/', variant = 'default', size = 'md' }: LogoProps) {
-  const sizeClasses = {
-    sm: 'text-xl',
-    md: 'text-2xl',
-    lg: 'text-3xl',
-  };
+const SIZE_MAP: Record<Exclude<LogoSize, number>, number> = {
+  sm: 32,
+  md: 48,
+  lg: 64,
+};
 
-  const textColor = variant === 'white' ? 'text-white' : 'text-ohe-slate-900';
+export function Logo({ size = 48, withLabel = false, variant = "default" }: LogoProps) {
+  const isWhite = variant === "white";
+  const sizePx = typeof size === "number" ? size : SIZE_MAP[size];
 
-  const content = (
-    <div className="inline-flex items-center gap-2">
-      <span className={`${sizeClasses[size]} font-bold ${textColor}`}>OHé</span>
-      <span className="px-2 py-0.5 bg-ohe-orange text-white text-xs font-bold rounded uppercase tracking-wide">
-        Diag
-      </span>
+  const aspectRatio = isWhite ? 1.98 : 1.9;
+  const width = Math.round(sizePx * aspectRatio);
+
+  const src = isWhite ? "/img/logos/logo-blanc.png" : "/img/logos/ohe-logo.png";
+
+  return (
+    <div className="inline-flex items-center gap-4">
+      <Image
+        src={src}
+        alt="OHé — Orthographe Héros"
+        width={width}
+        height={sizePx}
+        priority
+        className="h-auto w-auto max-w-full"
+        style={{ maxHeight: sizePx }}
+      />
+      {withLabel && (
+        <span className={`ohe-caption ${isWhite ? "text-white opacity-90" : "text-ohe-accent opacity-75"}`}>
+          Diagnostic
+        </span>
+      )}
     </div>
   );
-
-  if (href) {
-    return <Link href={href}>{content}</Link>;
-  }
-  return content;
 }
+
+export default Logo;

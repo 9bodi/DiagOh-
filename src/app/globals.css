@@ -1,29 +1,71 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ohe-blue: #2D3DB5;
-  --color-ohe-blue-dark: #1E2A78;
+  /* === OHé — Design system unifié (calqué sur le freemium) === */
+
+  /* Couleurs — nouveau système */
+  --color-ohe-bg: #F4F6FB;
+  --color-ohe-panel: #FFFFFF;
+  --color-ohe-panel-tint: #EEF2FA;
+  --color-ohe-ink: #15171C;
+  --color-ohe-muted: #6A6E78;
+  --color-ohe-line: #15171C22;
+  --color-ohe-line-soft: #15171C10;
+  --color-ohe-accent: #1E3A8A;
+  --color-ohe-accent-soft: #1E3A8A14;
+  --color-ohe-accent-ink: #F8FAFD;
+
+  /* === Alias de compat (à supprimer une fois toutes les pages refaites) === */
+  --color-ohe-blue: #1E3A8A;
+  --color-ohe-blue-dark: #15296B;
   --color-ohe-blue-light: #4F5FD0;
-  --color-ohe-orange: #FF6B35;
-  --color-ohe-orange-light: #FF8C5F;
-  --color-ohe-indigo: #3730A3;
-  --color-ohe-slate-50: #F8FAFC;
-  --color-ohe-slate-100: #F1F5F9;
+  --color-ohe-orange: #1E3A8A;         /* neutralisé — l'orange n'existe plus */
+  --color-ohe-orange-light: #4F5FD0;
+  --color-ohe-indigo: #1E3A8A;
+  --color-ohe-slate-50: #F4F6FB;
+  --color-ohe-slate-100: #EEF2FA;
   --color-ohe-slate-200: #E2E8F0;
-  --color-ohe-slate-600: #475569;
-  --color-ohe-slate-900: #0F172A;
-    --font-sans: var(--font-plex-sans), system-ui, sans-serif;
-  --font-serif: var(--font-source-serif), Georgia, serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --color-ohe-slate-600: #6A6E78;
+  --color-ohe-slate-900: #15171C;
+
+  /* Typographies */
+  --font-sans: var(--font-instrument-sans), -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: var(--font-instrument-serif), Georgia, serif;
+  --font-mono: ui-monospace, monospace;
 }
 
-:root {
-  --background: #ffffff;
-  --foreground: #0f172a;
+/* === Utilitaires custom === */
+@layer utilities {
+  .ohe-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .ohe-caption {
+    font-size: 10px;
+    letter-spacing: 0.36em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .text-balance { text-wrap: balance; }
+  .text-pretty { text-wrap: pretty; }
+}
+
+/* Reset léger */
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--color-ohe-bg);
+  color: var(--color-ohe-ink);
   font-family: var(--font-sans);
 }

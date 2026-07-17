@@ -85,11 +85,46 @@ export async function GET() {
     return NextResponse.json({ error: 'Question introuvable' }, { status: 404 });
   }
 
-  // Incrémenter le compteur
+  // ============ Détection de la 1re question du bloc ============
+  let isFirstOfBlock = false;
+  if (question.blockNumber != null) {
+    if (currentIndex === 0) {
+      isFirstOfBlock = true;
+    } else {
+      const previousQuestionId = questionsOrder[currentIndex - 1];
+      const previous = await prisma.question.findUnique({
+        where: { id: previousQuestionId },
+        select: { blockNumber: true },
+      });
+      isFirstOfBlock = previous?.blockNumber !== question.blockNumber;
+    }
+  }
+
+  // A-t-il déjà répondu à une question de ce bloc ?
+  // → si oui, on ne réaffiche pas l'interstitiel même en cas de reload
+  let hasAnsweredInBlock = false;
+  if (question.blockNumber != null) {
+    const count = await prisma.answer.count({
+      where: {
+        testSessionId: testSession.id,
+        question: { blockNumber: question.blockNumber },
+      },
+    });
+    hasAnsweredInBlock = count > 0;
+  }
+
+ // Incrémenter le compteur (anti-cheat quit-detection)
+// MAIS pas si l'interstitiel va être affiché : l'utilisateur ne voit pas
+// encore la question, un reload pendant l'interstitiel ne doit pas la marquer fausse.
+const willShowInterstitial = isFirstOfBlock && !hasAnsweredInBlock;
+
+if (!willShowInterstitial) {
   await prisma.testSession.update({
     where: { id: testSession.id },
     data: { currentQuestionServedCount: { increment: 1 } },
   });
+}
+
 
   return NextResponse.json({
     sessionId: testSession.id,
@@ -105,6 +140,9 @@ export async function GET() {
       sourceText: question.sourceText,
       options: question.options,
       timeLimit: question.timeLimit,
+      blockNumber: question.blockNumber,
     },
+    isFirstOfBlock,
+    hasAnsweredInBlock,
   });
 }

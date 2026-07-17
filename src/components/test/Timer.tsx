@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 
 interface TimerProps {
-  duration: number; // en secondes
+  duration: number;
   onExpire: () => void;
-  resetKey: string | number; // change quand on passe à une nouvelle question pour reset le timer
+  resetKey: string | number;
 }
 
 export default function Timer({ duration, onExpire, resetKey }: TimerProps) {
@@ -29,42 +29,57 @@ export default function Timer({ duration, onExpire, resetKey }: TimerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft]);
 
-  // Cercle SVG
+  const size = 56;
   const radius = 25;
   const circumference = 2 * Math.PI * radius;
   const progress = (timeLeft / duration) * circumference;
 
-  const colorClass =
-    timeLeft > 7
-      ? 'stroke-ohe-blue'
-      : timeLeft > 3
-      ? 'stroke-ohe-orange'
-      : 'stroke-red-500';
+  // Palette monochrome accent + rouge critique
+  const strokeColor =
+    timeLeft <= 3
+      ? '#DC2626'                       // rouge critique
+      : timeLeft <= 7
+      ? 'var(--color-ohe-ink)'          // encre : attention
+      : 'var(--color-ohe-accent)';      // bleu marine : normal
+
+  const textColor = timeLeft <= 3 ? 'text-red-600' : 'text-ohe-ink';
 
   return (
-    <div className="relative w-14 h-14 flex items-center justify-center">
-      <svg className="absolute inset-0 -rotate-90" viewBox="0 0 56 56">
+    <div
+      className="relative flex items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      <svg
+        className="absolute inset-0 -rotate-90"
+        viewBox={`0 0 ${size} ${size}`}
+      >
+        {/* Piste de fond */}
         <circle
-          cx="28"
-          cy="28"
+          cx={size / 2}
+          cy={size / 2}
           r={radius}
           fill="none"
-          className="stroke-ohe-slate-200"
-          strokeWidth="3"
+          stroke="var(--color-ohe-line)"
+          strokeWidth="2"
         />
+        {/* Anneau de progression */}
         <circle
-          cx="28"
-          cy="28"
+          cx={size / 2}
+          cy={size / 2}
           r={radius}
           fill="none"
-          className={`${colorClass} transition-all duration-1000 ease-linear`}
-          strokeWidth="3"
+          stroke={strokeColor}
+          strokeWidth="2.5"
           strokeDasharray={circumference}
           strokeDashoffset={circumference - progress}
           strokeLinecap="round"
+          className="transition-all duration-1000 ease-linear"
         />
       </svg>
-      <span className="relative font-mono text-base font-bold text-ohe-slate-900 tabular-nums">
+      <span
+        className={`relative font-serif italic text-[20px] tabular-nums ${textColor}`}
+        style={{ letterSpacing: '-0.02em' }}
+      >
         {timeLeft}
       </span>
     </div>

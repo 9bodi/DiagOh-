@@ -1,28 +1,22 @@
 import type { Metadata } from 'next';
-import { Source_Serif_4, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
+import { Instrument_Sans, Instrument_Serif } from 'next/font/google';
 import './globals.css';
 import SessionProvider from '@/components/SessionProvider';
 import { Toaster } from 'sonner';
 
-const plexSans = IBM_Plex_Sans({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-plex-sans',
-  display: 'swap',
-});
-
-const sourceSerif = Source_Serif_4({
+const instrumentSans = Instrument_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600'],
   style: ['normal', 'italic'],
-  variable: '--font-source-serif',
+  variable: '--font-instrument-sans',
   display: 'swap',
 });
 
-const plexMono = IBM_Plex_Mono({
+const instrumentSerif = Instrument_Serif({
   subsets: ['latin'],
-  weight: ['400', '500'],
-  variable: '--font-plex-mono',
+  weight: ['400'],
+  style: ['normal', 'italic'],
+  variable: '--font-instrument-serif',
   display: 'swap',
 });
 
@@ -39,7 +33,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${plexSans.variable} ${sourceSerif.variable} ${plexMono.variable}`}
+      className={`${instrumentSans.variable} ${instrumentSerif.variable}`}
     >
       <body className="antialiased">
         <SessionProvider>{children}</SessionProvider>

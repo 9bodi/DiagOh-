@@ -2,38 +2,29 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import Logo from '@/components/ui/Logo';
-import Button from '@/components/ui/Button';
+import { Eyebrow } from '@/components/ui/Eyebrow';
+import { Badge } from '@/components/ui/Badge';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import ResultRadar from '@/components/result/ResultRadar';
+import QuadrantMatrix from '@/components/result/QuadrantMatrix';
+import BlockResultRow from '@/components/result/BlockResultRow';
 import LogoutButton from '@/components/LogoutButton';
 
-// ============ Métadonnées niveau CECRL ============
-const LEVEL_META: Record<string, { letter: string; name: string; tagline: string }> = {
-  A:  { letter: 'A',  name: 'Élémentaire',   tagline: 'Des bases à consolider.' },
-  B1: { letter: 'B1', name: 'Intermédiaire', tagline: 'Une base en construction.' },
-  B2: { letter: 'B2', name: 'Avancé',        tagline: 'Une maîtrise solide.' },
-  C:  { letter: 'C',  name: 'Expert',        tagline: 'Une excellente maîtrise.' },
+const LEVEL_INFO: Record<string, { label: string; tagline: string }> = {
+  A:  { label: 'Élémentaire',   tagline: 'Des bases à consolider.' },
+  B1: { label: 'Intermédiaire', tagline: 'Une base en construction.' },
+  B2: { label: 'Avancé',        tagline: 'Une maîtrise solide.' },
+  C:  { label: 'Expert',        tagline: 'Une excellente maîtrise.' },
 };
 
-// ============ Libellés des 6 blocs procéduraux ============
 const BLOCKS = [
-  { key: 'scoreBloc1', label: 'Singulier / Pluriel' },
-  { key: 'scoreBloc2', label: 'Conjugaison' },
-  { key: 'scoreBloc3', label: 'Participe passé' },
-  { key: 'scoreBloc4', label: 'Orthographe lexicale' },
-  { key: 'scoreBloc5', label: 'Syntaxe' },
-  { key: 'scoreBloc6', label: 'Compréhension' },
+  { key: 'scoreBloc1', name: 'Singulier / Pluriel' },
+  { key: 'scoreBloc2', name: 'Conjugaison' },
+  { key: 'scoreBloc3', name: 'Participe passé' },
+  { key: 'scoreBloc4', name: 'Orthographe lexicale' },
+  { key: 'scoreBloc5', name: 'Syntaxe' },
+  { key: 'scoreBloc6', name: 'Compréhension' },
 ] as const;
-
-// ============ Score par bloc → libellé qualitatif ============
-function scoreToLabel(score: number | null | undefined): {
-  label: string;
-  tone: 'strong' | 'mid' | 'low' | 'none';
-} {
-  if (score === null || score === undefined) return { label: '—', tone: 'none' };
-  if (score >= 1)    return { label: 'Maîtrisé',             tone: 'strong' };
-  if (score >= 0.75) return { label: "En cours d'acquisition", tone: 'mid' };
-  if (score >= 0.5)  return { label: 'Fragile',              tone: 'mid' };
-  return { label: 'Non maîtrisé', tone: 'low' };
-}
 
 export default async function ResultPage() {
   const session = await auth();
@@ -46,190 +37,176 @@ export default async function ResultPage() {
 
   if (!testSession) redirect('/welcome');
 
-  const levelInfo = testSession.level ? LEVEL_META[testSession.level] : null;
+  const level = (testSession.level ?? 'A') as keyof typeof LEVEL_INFO;
+  const levelInfo = LEVEL_INFO[level] ?? LEVEL_INFO.A;
   const scoreTotal = testSession.scoreProcedural ?? 0;
   const firstName = session.user.name?.split(' ')[0] ?? '';
-
-  // Calcul forces / faiblesses (top 2 forts, top 2 faibles)
-  const blocksWithScore = BLOCKS.map(b => ({
-    label: b.label,
-    score: (testSession[b.key as keyof typeof testSession] as number | null) ?? 0,
-  }));
-  const sorted = [...blocksWithScore].sort((a, b) => b.score - a.score);
-  const strengths = sorted.filter(b => b.score >= 0.75).slice(0, 2);
-  const weaknesses = sorted.filter(b => b.score < 0.5).slice(-2).reverse();
+  const completedDate = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(
+    testSession.completedAt ?? new Date()
+  );
 
   return (
-    <main className="min-h-screen bg-ohe-slate-50">
-      {/* Top bar */}
-      <header className="px-6 md:px-12 py-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Logo size="md" />
-          <div className="hidden md:block w-px h-5 bg-ohe-slate-200" />
-          <p className="hidden md:block font-mono text-[10px] tracking-[0.14em] uppercase text-ohe-slate-600">
-            Votre diagnostic
-          </p>
+    <div className="min-h-screen bg-ohe-bg">
+      {/* Header */}
+      <header className="border-b border-ohe-line bg-white">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Logo size={40} />
+          <LogoutButton />
         </div>
-        <LogoutButton />
       </header>
 
-      <div className="px-4 sm:px-8 lg:px-16 pb-16">
-        <div className="w-full max-w-6xl mx-auto bg-white rounded-3xl border border-ohe-slate-200/60 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_24px_48px_-24px_rgba(15,23,42,0.18)] overflow-hidden grid grid-cols-1 lg:grid-cols-[1.05fr_1fr] min-h-[640px]">
+      <main className="max-w-6xl mx-auto px-6 py-16">
+        {/* Hero */}
+        <section className="mb-16">
+          <Eyebrow tone="accent">Bilan du diagnostic</Eyebrow>
+          <h1
+            className="text-5xl md:text-6xl text-ohe-ink mt-4 text-balance"
+            style={{ fontFamily: 'var(--font-instrument-serif)' }}
+          >
+            {firstName ? `Bravo ${firstName}, ` : 'Bravo, '}voici votre{' '}
+            <span className="italic text-ohe-accent">résultat</span>.
+          </h1>
+          <p className="ohe-caption text-ohe-muted mt-6">Bilan édité le {completedDate}</p>
+        </section>
 
-          {/* ============== LEFT — Score global + CECRL + CTA ============== */}
-          <div className="p-10 lg:p-14 flex flex-col justify-between gap-10">
-            <div>
-              <p className="font-mono text-[11px] tracking-[0.16em] uppercase text-ohe-orange mb-5">
-                ✱ Diagnostic terminé
-              </p>
-
-              <h1 className="font-serif font-normal text-4xl lg:text-[52px] leading-[1.05] tracking-tight text-ohe-slate-900">
-                {firstName ? `Bravo ${firstName},` : 'Bravo,'}
-                <br />
-                <em className="italic text-ohe-blue">voici votre résultat.</em>
-              </h1>
-
-              <p className="mt-5 text-base lg:text-lg text-ohe-slate-600 leading-relaxed max-w-md">
-                {levelInfo?.tagline ?? 'Votre niveau de maîtrise de l\'orthographe a été évalué.'}
-              </p>
-
-              {/* Bloc Niveau + Score */}
-<div className="mt-9 flex items-center gap-6 p-6 bg-ohe-slate-50 border border-ohe-slate-100 rounded-2xl">
-  <div className="flex items-center justify-center w-24 h-24 rounded-2xl bg-ohe-blue text-white flex-shrink-0">
-    <span className="font-serif text-5xl leading-none">
-      {levelInfo?.letter ?? '—'}
-    </span>
-  </div>
-  <div className="leading-tight min-w-0">
-    <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ohe-slate-600 mb-1.5">
-      Niveau atteint
-    </p>
-    <p className="font-serif text-2xl text-ohe-slate-900 mb-2">
-      {levelInfo?.name ?? 'Non évalué'}
-    </p>
-    <p className="text-sm text-ohe-slate-600">
-      Score global :{' '}
-      <span className="font-semibold text-ohe-slate-900">
-        {scoreTotal.toFixed(2).replace('.', ',')} / 6
-      </span>
-    </p>
-  </div>
-</div>
-
-
-              {/* Forces / faiblesses */}
-              {(strengths.length > 0 || weaknesses.length > 0) && (
-                <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {strengths.length > 0 && (
-                    <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
-                      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-emerald-700 mb-2">
-                        ✓ Vos forces
-                      </p>
-                      <ul className="space-y-1">
-                        {strengths.map(s => (
-                          <li key={s.label} className="text-sm text-ohe-slate-900 font-medium">
-                            {s.label}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {weaknesses.length > 0 && (
-                    <div className="p-4 rounded-xl bg-ohe-orange/5 border border-ohe-orange/20">
-                      <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ohe-orange mb-2">
-                        ✱ À renforcer
-                      </p>
-                      <ul className="space-y-1">
-                        {weaknesses.map(w => (
-                          <li key={w.label} className="text-sm text-ohe-slate-900 font-medium">
-                            {w.label}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* CTA */}
-            <div className="flex items-center gap-4 flex-wrap mt-10">
-
-              <a href={`/api/pdf/${session.user.id}`} target="_blank" rel="noopener noreferrer">
-                <Button variant="primary" size="lg">
-                  Télécharger mon bilan PDF →
-                </Button>
-              </a>
-              <p className="text-xs text-ohe-slate-600">
-                Votre badge sera disponible prochainement.
-              </p>
-            </div>
-          </div>
-
-          {/* ============== RIGHT — Détail des 6 blocs ============== */}
-          <div className="relative p-10 lg:p-14 flex flex-col gap-6 bg-gradient-to-br from-ohe-indigo to-[#2A2580] text-white overflow-hidden">
-            {/* Subtle warm glow */}
+        {/* Niveau global + Score */}
+        <section className="mb-20 grid md:grid-cols-2 gap-8">
+          <div className="border border-ohe-line rounded-3xl p-10 bg-white">
+            <Eyebrow tone="muted">Niveau CECRL</Eyebrow>
             <div
-              className="pointer-events-none absolute inset-0"
-              style={{
-                background:
-                  'radial-gradient(circle at 80% 20%, rgba(255,107,53,0.18), transparent 50%)',
+              className="text-8xl text-ohe-accent mt-4 mb-2"
+              style={{ fontFamily: 'var(--font-instrument-serif)', fontStyle: 'italic' }}
+            >
+              {level}
+            </div>
+            <p
+              className="text-2xl text-ohe-ink"
+              style={{ fontFamily: 'var(--font-instrument-serif)' }}
+            >
+              {levelInfo.label}
+            </p>
+            <p className="text-ohe-muted mt-2">{levelInfo.tagline}</p>
+          </div>
+          <div className="border border-ohe-line rounded-3xl p-10 bg-ohe-panel-tint flex flex-col justify-center">
+            <Eyebrow tone="muted">Score procédural</Eyebrow>
+            <div className="flex items-baseline gap-2 mt-4">
+              <span
+                className="text-6xl text-ohe-ink"
+                style={{ fontFamily: 'var(--font-instrument-serif)', fontStyle: 'italic' }}
+              >
+                {scoreTotal.toFixed(2).replace('.', ',')}
+              </span>
+              <span className="text-2xl text-ohe-muted">/ 6</span>
+            </div>
+            <p className="text-sm text-ohe-muted mt-4">
+              Somme des 6 blocs procéduraux (chaque bloc noté sur 1, correspondant à 8 questions).
+            </p>
+          </div>
+        </section>
+
+        {/* Radar */}
+        <section className="mb-20">
+          <Eyebrow tone="accent">Vos compétences</Eyebrow>
+          <h2
+            className="text-4xl text-ohe-ink mt-3 mb-10"
+            style={{ fontFamily: 'var(--font-instrument-serif)' }}
+          >
+            Cartographie <span className="italic text-ohe-accent">procédurale</span>
+          </h2>
+          <div className="border border-ohe-line rounded-3xl p-10 bg-white">
+            <ResultRadar
+              scores={{
+                bloc1: testSession.scoreBloc1 ?? 0,
+                bloc2: testSession.scoreBloc2 ?? 0,
+                bloc3: testSession.scoreBloc3 ?? 0,
+                bloc4: testSession.scoreBloc4 ?? 0,
+                bloc5: testSession.scoreBloc5 ?? 0,
+                bloc6: testSession.scoreBloc6 ?? 0,
               }}
             />
+          </div>
+        </section>
 
-            <div className="relative">
-              <p className="font-mono text-[11px] tracking-[0.16em] uppercase text-white/60 mb-2">
-                ✱ Détail par compétence
-              </p>
-              <h2 className="font-serif text-2xl lg:text-[28px] tracking-tight leading-tight">
-                Vos résultats <em className="italic text-ohe-orange-light">bloc par bloc.</em>
-              </h2>
-            </div>
+        {/* Détail par bloc */}
+        <section className="mb-20">
+          <Eyebrow tone="accent">Détail par bloc</Eyebrow>
+          <h2
+            className="text-4xl text-ohe-ink mt-3 mb-10"
+            style={{ fontFamily: 'var(--font-instrument-serif)' }}
+          >
+            Vos résultats <span className="italic text-ohe-accent">détaillés</span>
+          </h2>
+          <div className="border border-ohe-line rounded-3xl px-8 py-2 bg-white">
+            {BLOCKS.map((block, i) => (
+              <BlockResultRow
+                key={block.key}
+                index={i + 1}
+                name={block.name}
+                score={((testSession as any)[block.key] as number | null) ?? 0}
+              />
+            ))}
+          </div>
+        </section>
 
-            <div className="relative flex flex-col gap-3.5 mt-2">
-              {blocksWithScore.map((b, i) => {
-                const meta = scoreToLabel(b.score);
-                const pct = Math.round(b.score * 100);
-                const barColor =
-                  meta.tone === 'strong'
-                    ? 'bg-emerald-400'
-                    : meta.tone === 'mid'
-                    ? 'bg-ohe-orange'
-                    : meta.tone === 'low'
-                    ? 'bg-red-400'
-                    : 'bg-white/30';
+        {/* Quadrant */}
+        <section className="mb-20">
+          <Eyebrow tone="accent">Profil déclaratif</Eyebrow>
+          <h2
+            className="text-4xl text-ohe-ink mt-3 mb-10"
+            style={{ fontFamily: 'var(--font-instrument-serif)' }}
+          >
+            Adaptation <span className="italic text-ohe-accent">& intérêt</span>
+          </h2>
+          <QuadrantMatrix
+            quadrant={((testSession as any).quadrant ?? 3) as 1 | 2 | 3 | 4}
+            scoreAdaptation={(testSession as any).scoreAdaptation ?? 0}
+            scoreInteret={(testSession as any).scoreInteret ?? 0}
+          />
+        </section>
 
-                return (
-                  <div
-                    key={b.label}
-                    className="p-4 rounded-xl bg-white/[0.06] border border-white/[0.10]"
-                  >
-                    <div className="flex items-baseline justify-between gap-3 mb-2">
-                      <div className="flex items-baseline gap-2.5 min-w-0">
-                        <span className="font-mono text-[10.5px] tracking-[0.14em] text-white/50 flex-shrink-0">
-                          {String(i + 1).padStart(2, '0')}
-                        </span>
-                        <p className="font-semibold text-[15px] tracking-tight truncate">
-                          {b.label}
-                        </p>
-                      </div>
-                      <span className="font-mono text-[11px] tracking-wider text-white/70 flex-shrink-0">
-                        {meta.label}
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${barColor} transition-all duration-500`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+        {/* Actions */}
+        <section className="mb-20">
+          <div className="border border-ohe-line rounded-3xl p-10 bg-white">
+            <Eyebrow tone="accent">Emporter votre bilan</Eyebrow>
+            <h2
+              className="text-3xl text-ohe-ink mt-3 mb-8"
+              style={{ fontFamily: 'var(--font-instrument-serif)' }}
+            >
+              Téléchargez vos <span className="italic text-ohe-accent">livrables</span>
+            </h2>
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <a
+                href={`/api/pdf/${session.user.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <PrimaryButton>Télécharger mon bilan PDF</PrimaryButton>
+              </a>
+              <div className="inline-flex items-center gap-3">
+                <button
+                  disabled
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-ohe-line text-ohe-muted cursor-not-allowed opacity-60"
+                  style={{ fontFamily: 'var(--font-instrument-sans)' }}
+                >
+                  Télécharger mon badge LinkedIn
+                </button>
+                <Badge tone="muted">Prochainement</Badge>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    </main>
+        </section>
+
+        {/* Footer signature */}
+        <footer className="border-t border-ohe-line pt-10 text-center">
+          <p
+            className="text-ohe-muted italic"
+            style={{ fontFamily: 'var(--font-instrument-serif)' }}
+          >
+            Diagnostic conçu par Roxane Joannidès
+          </p>
+          <p className="ohe-caption text-ohe-muted mt-1">Docteure en sciences du langage</p>
+        </footer>
+      </main>
+    </div>
   );
 }
