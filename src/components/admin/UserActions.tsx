@@ -124,7 +124,8 @@ export default function UserActions({
         )}
         {canDownloadPdf && (
           <a
-            href={`/api/pdf/${userId}`}
+            href={`/api/pdf/client/${userId}`}
+
             target="_blank"
             rel="noopener noreferrer"
             className="px-2.5 py-1 rounded-md text-[11px] font-medium text-ohe-blue hover:bg-ohe-blue/[0.06] transition-colors"

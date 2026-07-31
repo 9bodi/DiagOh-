@@ -176,10 +176,11 @@ export default async function ResultPage() {
             </h2>
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
               <a
-                href={`/api/pdf/${session.user.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+  href={`/api/pdf/participant/${session.user.id}`}
+  target="_blank"
+  rel="noopener noreferrer"
+>
+
                 <PrimaryButton>Télécharger mon bilan PDF</PrimaryButton>
               </a>
               <div className="inline-flex items-center gap-3">
