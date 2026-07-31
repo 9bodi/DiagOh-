@@ -90,7 +90,7 @@ const groups = await prisma.group.findMany({
         {/* Hero */}
         <div className="mb-10">
           <p className="font-mono text-[11px] tracking-[0.16em] uppercase text-ohe-orange mb-4">
-            ✱ Tableau de bord
+             Tableau de bord
           </p>
           <h1 className="font-serif font-normal text-4xl lg:text-[52px] leading-[1.05] tracking-tight text-ohe-slate-900">
             {adminFirstName ? `Bonjour ${adminFirstName},` : 'Bonjour,'}

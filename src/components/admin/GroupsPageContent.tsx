@@ -29,9 +29,7 @@ export default function GroupsPageContent({ groups, orgName }: GroupsPageContent
       {/* Hero */}
       <div className="flex items-end justify-between gap-6 flex-wrap mb-10">
         <div>
-          <p className="font-mono text-[11px] tracking-[0.16em] uppercase text-ohe-orange mb-4">
-            ✱ Groupes
-          </p>
+         
           <h1 className="font-serif font-normal text-4xl lg:text-[48px] leading-[1.05] tracking-tight text-ohe-slate-900">
             Vos <em className="italic text-ohe-blue">groupes.</em>
           </h1>

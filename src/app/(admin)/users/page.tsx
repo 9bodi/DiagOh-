@@ -105,13 +105,18 @@ export default async function UsersPage() {
 />
 
 
-      <UsersPageContent
-        users={usersData}
-        groups={groups}
-        orgName={organization?.name ?? ''}
-        credits={organization?.credits ?? 0}
-        userRole={session.user.role}
-      />
+  <main style={{ paddingLeft: '40px', paddingRight: '40px', paddingTop: '32px', paddingBottom: '32px' }}>
+  <UsersPageContent
+    users={usersData}
+    groups={groups}
+    orgName={organization?.name ?? ''}
+    credits={organization?.credits ?? 0}
+    userRole={session.user.role}
+  />
+</main>
+
+
     </div>
   );
 }
+

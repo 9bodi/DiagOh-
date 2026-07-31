@@ -68,9 +68,7 @@ export default function SupervisorsPageContent({
     <main className="max-w-6xl mx-auto px-6 py-10">
       <div className="flex items-start justify-between mb-8 gap-6">
         <div>
-          <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-2">
-            ✱ Superviseurs
-          </p>
+          
           <h1 className="font-serif text-4xl text-ohe-slate-900 mb-2">
             Vos superviseurs
           </h1>
