@@ -29,8 +29,9 @@ export default function Timer({ duration, onExpire, resetKey }: TimerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft]);
 
-  const size = 56;
-  const radius = 25;
+  const size = 80;
+const radius = 36;
+
   const circumference = 2 * Math.PI * radius;
   const progress = (timeLeft / duration) * circumference;
 
@@ -60,7 +61,7 @@ export default function Timer({ duration, onExpire, resetKey }: TimerProps) {
           r={radius}
           fill="none"
           stroke="var(--color-ohe-line)"
-          strokeWidth="2"
+          strokeWidth="3"
         />
         {/* Anneau de progression */}
         <circle
@@ -69,7 +70,7 @@ export default function Timer({ duration, onExpire, resetKey }: TimerProps) {
           r={radius}
           fill="none"
           stroke={strokeColor}
-          strokeWidth="2.5"
+          strokeWidth="3.5"
           strokeDasharray={circumference}
           strokeDashoffset={circumference - progress}
           strokeLinecap="round"
@@ -77,7 +78,7 @@ export default function Timer({ duration, onExpire, resetKey }: TimerProps) {
         />
       </svg>
       <span
-        className={`relative font-serif italic text-[20px] tabular-nums ${textColor}`}
+className={`relative font-serif italic text-[28px] font-medium tabular-nums ${textColor}`}
         style={{ letterSpacing: '-0.02em' }}
       >
         {timeLeft}

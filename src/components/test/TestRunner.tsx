@@ -227,9 +227,11 @@ export default function TestRunner({ userName }: { userName: string }) {
   const { question, currentIndex, totalQuestions } = data;
 
   return (
-    <main className="min-h-screen bg-ohe-bg text-ohe-ink flex flex-col">
+    <main className="h-screen bg-ohe-bg text-ohe-ink flex flex-col overflow-hidden">
+
       {/* Header */}
-      <header className="px-6 sm:px-10 lg:px-14 pt-6 pb-4 flex items-center justify-between gap-4 border-b border-ohe-line">
+      <header className="px-6 sm:px-10 lg:px-14 pt-4 pb-3 flex items-center justify-between gap-4 border-b border-ohe-line shrink-0">
+
         <Logo size={40} withLabel />
 
         <div className="flex items-center gap-6 sm:gap-8">
@@ -254,14 +256,15 @@ export default function TestRunner({ userName }: { userName: string }) {
       </div>
 
       {/* Body */}
-      <div className="flex-1 flex items-center justify-center px-6 sm:px-10 lg:px-14 py-10 sm:py-14">
-        <div className="w-full max-w-3xl">
+      <div className="flex-1 min-h-0 flex items-center justify-center px-6 sm:px-10 lg:px-14 py-4 sm:py-6 overflow-y-auto">
+  <div className="w-full max-w-3xl">
+
           {question.subCategory && (
             <Eyebrow tone="accent">{question.subCategory}</Eyebrow>
           )}
 
           {question.sourceText && (
-            <div className="mt-8 p-5 sm:p-6 bg-ohe-panel-tint border-l-2 border-ohe-accent rounded-r-2xl">
+            <div className="mt-4 p-5 sm:p-4 bg-ohe-panel-tint border-l-2 border-ohe-accent rounded-r-2xl">
               <div className="ohe-caption text-ohe-muted mb-2">Texte à lire</div>
               <p className="font-serif text-lg sm:text-xl text-ohe-ink leading-relaxed">
                 {question.sourceText}
@@ -269,7 +272,7 @@ export default function TestRunner({ userName }: { userName: string }) {
             </div>
           )}
 
-          <div className="mt-8">
+          <div className="mt-5">
             <QuestionCard
               subCategory={null}
               instruction={question.instruction}
@@ -284,7 +287,7 @@ export default function TestRunner({ userName }: { userName: string }) {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-ohe-line px-6 sm:px-10 lg:px-14 py-5 flex items-center justify-between gap-4 flex-wrap">
+<footer className="border-t border-ohe-line px-6 sm:px-10 lg:px-14 py-4 flex items-center justify-between gap-4 flex-wrap shrink-0">
         <button
           type="button"
           onClick={() => setShowExitModal(true)}

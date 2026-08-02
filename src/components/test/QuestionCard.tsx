@@ -36,14 +36,15 @@ export default function QuestionCard({
       )}
 
       {questionText && questionText.trim() !== '' && (
-        <div className="mb-8 pb-8 border-b border-ohe-line-soft">
-          <p className="font-serif text-[26px] sm:text-[32px] text-ohe-ink leading-[1.2] tracking-[-0.01em]">
+  <div className="mb-5 pb-5 border-b border-ohe-line-soft">
+    <p className="font-serif text-[22px] sm:text-[28px] text-ohe-ink leading-[1.2] tracking-[-0.01em]">
+
             « {questionText} »
           </p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {options.map((option, index) => {
           const isSelected = selectedIndex === index;
           return (
@@ -53,7 +54,8 @@ export default function QuestionCard({
               onClick={() => !disabled && onSelect(index)}
               disabled={disabled}
               className={`
-                group flex items-center gap-4 px-5 py-4 rounded-2xl border text-left
+  group flex items-center gap-3 px-4 py-3 rounded-2xl border text-left
+
                 transition-all duration-150
                 ${
                   isSelected
