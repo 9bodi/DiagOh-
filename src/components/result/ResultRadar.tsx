@@ -1,5 +1,6 @@
 "use client";
 
+
 interface ResultRadarProps {
   scores: {
     bloc1: number;
@@ -13,22 +14,22 @@ interface ResultRadarProps {
 }
 
 const BLOCK_LABELS = [
-  { key: "bloc1", short: "Sing./Pluriel" },
-  { key: "bloc2", short: "Conjugaison" },
-  { key: "bloc3", short: "Part. passé" },
-  { key: "bloc4", short: "Lexical" },
-  { key: "bloc5", short: "Syntaxe" },
-  { key: "bloc6", short: "Compréhension" },
+  { key: "bloc1", short: "Singulier / Pluriel", full: "Singulier / Pluriel" },
+  { key: "bloc2", short: "Conjugaison", full: "Conjugaison" },
+  { key: "bloc3", short: "Participe passé", full: "Participe passé" },
+  { key: "bloc4", short: "Orthographe lexicale", full: "Orthographe lexicale" },
+  { key: "bloc5", short: "Syntaxe", full: "Syntaxe" },
+  { key: "bloc6", short: "Compréhension", full: "Compréhension" },
 ] as const;
 
-export default function ResultRadar({ scores, size = 480 }: ResultRadarProps) {
+export default function ResultRadar({ scores, size = 560 }: ResultRadarProps) {
   const cx = size / 2;
   const cy = size / 2;
-  const radius = size * 0.35;
-  const labelRadius = radius * 1.28;
+  const radius = size * 0.28;
+  const labelRadius = radius * 1.35;
 
   const axes = BLOCK_LABELS.map((label, i) => {
-    const angle = -Math.PI / 2 + (i * (2 * Math.PI)) / 6;
+    const angle = (-Math.PI / 2) + (i * (2 * Math.PI) / 6);
     return {
       ...label,
       angle,
@@ -53,12 +54,16 @@ export default function ResultRadar({ scores, size = 480 }: ResultRadarProps) {
 
   return (
     <div className="w-full flex justify-center">
-      <svg
-        viewBox={`0 0 ${size} ${size}`}
-        className="w-full max-w-[520px] h-auto"
-        role="img"
-        aria-label="Radar des compétences procédurales"
-      >
+     <svg
+  viewBox={`-140 0 ${size + 280} ${size}`}
+  className="w-full h-auto"
+  role="img"
+  aria-label="Radar des compétences procédurales"
+>
+
+
+
+        {/* Grid */}
         {gridLevels.map((level) => {
           const points = axes
             .map((axis) => {
@@ -80,6 +85,7 @@ export default function ResultRadar({ scores, size = 480 }: ResultRadarProps) {
           );
         })}
 
+        {/* Axes lines */}
         {axes.map((axis, i) => (
           <line
             key={i}
@@ -93,6 +99,7 @@ export default function ResultRadar({ scores, size = 480 }: ResultRadarProps) {
           />
         ))}
 
+        {/* Data polygon */}
         <polygon
           points={dataPoints}
           fill="var(--color-ohe-accent)"
@@ -102,6 +109,7 @@ export default function ResultRadar({ scores, size = 480 }: ResultRadarProps) {
           strokeLinejoin="round"
         />
 
+        {/* Data points */}
         {axes.map((axis, i) => {
           const r = radius * axis.value;
           const x = cx + Math.cos(axis.angle) * r;
@@ -114,16 +122,23 @@ export default function ResultRadar({ scores, size = 480 }: ResultRadarProps) {
           );
         })}
 
+        {/* Labels */}
         {axes.map((axis, i) => {
           let textAnchor: "start" | "middle" | "end" = "middle";
           if (axis.labelX < cx - 5) textAnchor = "end";
           else if (axis.labelX > cx + 5) textAnchor = "start";
 
+          // Split long labels on two lines
+          const words = axis.short.split(" ");
+          const isLong = axis.short.length > 12;
+          const line1 = isLong && words.length > 1 ? words[0] : axis.short;
+          const line2 = isLong && words.length > 1 ? words.slice(1).join(" ") : "";
+
           return (
             <g key={i}>
               <text
                 x={axis.labelX}
-                y={axis.labelY}
+                y={axis.labelY - (line2 ? 8 : 0)}
                 textAnchor={textAnchor}
                 dominantBaseline="middle"
                 className="fill-ohe-ink"
@@ -134,11 +149,28 @@ export default function ResultRadar({ scores, size = 480 }: ResultRadarProps) {
                   letterSpacing: "0.01em",
                 }}
               >
-                {axis.short}
+                {line1}
               </text>
+              {line2 && (
+                <text
+                  x={axis.labelX}
+                  y={axis.labelY + 6}
+                  textAnchor={textAnchor}
+                  dominantBaseline="middle"
+                  className="fill-ohe-ink"
+                  style={{
+                    fontFamily: "var(--font-instrument-sans)",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  {line2}
+                </text>
+              )}
               <text
                 x={axis.labelX}
-                y={axis.labelY + 16}
+                y={axis.labelY + (line2 ? 22 : 16)}
                 textAnchor={textAnchor}
                 dominantBaseline="middle"
                 className="fill-ohe-muted"

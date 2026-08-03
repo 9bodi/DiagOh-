@@ -371,8 +371,9 @@ export default function BilanParticipantPDF({ data, logo }: { data: BilanData; l
             </Svg>
             <View style={styles.ringCenter}>
               <Text style={styles.ringScore}>
-                {data.scoreProcedural.toFixed(1).replace('.', ',')}
-              </Text>
+  {data.scoreProcedural.toFixed(2).replace('.', ',')}
+</Text>
+
               <Text style={styles.ringMax}>/ 6</Text>
             </View>
           </View>

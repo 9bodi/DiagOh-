@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
+import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -16,6 +17,7 @@ export default function CreatePasswordForm({ token, email }: Props) {
   const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -36,41 +38,40 @@ export default function CreatePasswordForm({ token, email }: Props) {
       setError('Les mots de passe ne correspondent pas.');
       return;
     }
+    if (!consent) {
+      setError('Vous devez accepter la politique de confidentialité et les CGU pour continuer.');
+      return;
+    }
 
     setLoading(true);
 
     const res = await fetch('/api/auth/activate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, firstName, lastName, password }),
+      body: JSON.stringify({ token, firstName, lastName, password, consent }),
     });
 
-const data = await res.json();
-if (!res.ok) {
-  setError(data.error || 'Une erreur est survenue.');
-  setLoading(false);
-  return;
-}
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error || 'Une erreur est survenue.');
+      setLoading(false);
+      return;
+    }
 
-// Auto-login
-const result = await signIn('credentials', { email, password, redirect: false });
-if (result?.error) {
-  setError('Compte créé mais connexion impossible. Allez sur /login.');
-  setLoading(false);
-  return;
-}
+    const result = await signIn('credentials', { email, password, redirect: false });
+    if (result?.error) {
+      setError('Compte créé mais connexion impossible. Allez sur /login.');
+      setLoading(false);
+      return;
+    }
 
-const role = data.role;
-if (role === 'ADMIN' || role === 'SUPERADMIN' || role === 'SUPERVISOR') {
-  router.push('/users');
-} else if (data.hasReadySession) {
-  router.push('/welcome'); // /welcome détectera READY_TO_START et proposera de commencer
-} else {
-  router.push('/welcome'); // écran d'attente classique
-}
-router.refresh();
-
-
+    const role = data.role;
+    if (role === 'ADMIN' || role === 'SUPERADMIN' || role === 'SUPERVISOR') {
+      router.push('/users');
+    } else {
+      router.push('/welcome');
+    }
+    router.refresh();
   };
 
   return (
@@ -105,6 +106,36 @@ router.refresh();
         onChange={(e) => setConfirmPassword(e.target.value)}
         required
       />
+
+      {/* Case à cocher consentement RGPD */}
+      <label className="flex items-start gap-3 text-sm text-ohe-slate-700 cursor-pointer pt-2">
+        <input
+          type="checkbox"
+          checked={consent}
+          onChange={(e) => setConsent(e.target.checked)}
+          className="mt-1 w-4 h-4 shrink-0 accent-ohe-accent"
+        />
+        <span className="leading-relaxed">
+          J&apos;ai lu et j&apos;accepte la{' '}
+          <Link
+            href="/politique-confidentialite"
+            target="_blank"
+            className="text-ohe-accent underline hover:opacity-80"
+          >
+            politique de confidentialité
+          </Link>
+          {' '}et les{' '}
+          <Link
+            href="/cgu"
+            target="_blank"
+            className="text-ohe-accent underline hover:opacity-80"
+          >
+            conditions générales d&apos;utilisation
+          </Link>
+          .
+        </span>
+      </label>
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded">
           {error}

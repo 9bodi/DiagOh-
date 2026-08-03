@@ -228,10 +228,8 @@ export default function TestRunner({ userName }: { userName: string }) {
 
   return (
     <main className="h-screen bg-ohe-bg text-ohe-ink flex flex-col overflow-hidden">
-
       {/* Header */}
       <header className="px-6 sm:px-10 lg:px-14 pt-4 pb-3 flex items-center justify-between gap-4 border-b border-ohe-line shrink-0">
-
         <Logo size={40} withLabel />
 
         <div className="flex items-center gap-6 sm:gap-8">
@@ -257,10 +255,14 @@ export default function TestRunner({ userName }: { userName: string }) {
 
       {/* Body */}
       <div className="flex-1 min-h-0 flex items-center justify-center px-6 sm:px-10 lg:px-14 py-4 sm:py-6 overflow-y-auto">
-  <div className="w-full max-w-3xl">
-
-          {question.subCategory && (
-            <Eyebrow tone="accent">{question.subCategory}</Eyebrow>
+        <div key={question.id} className="w-full max-w-3xl animate-question-fade">
+          {question.blockNumber === 4 && (
+            <div className="mb-4 flex items-center gap-2">
+              <span className="w-1 h-4 bg-ohe-accent" />
+              <p className="font-serif italic text-[14px] text-ohe-accent">
+                Ces mots n&apos;existent pas — c&apos;est normal.
+              </p>
+            </div>
           )}
 
           {question.sourceText && (
@@ -287,7 +289,7 @@ export default function TestRunner({ userName }: { userName: string }) {
       </div>
 
       {/* Footer */}
-<footer className="border-t border-ohe-line px-6 sm:px-10 lg:px-14 py-4 flex items-center justify-between gap-4 flex-wrap shrink-0">
+      <footer className="border-t border-ohe-line px-6 sm:px-10 lg:px-14 py-4 flex items-center justify-between gap-4 flex-wrap shrink-0">
         <button
           type="button"
           onClick={() => setShowExitModal(true)}
@@ -333,13 +335,28 @@ export default function TestRunner({ userName }: { userName: string }) {
                 onClick={() => setShowExitModal(false)}
                 className="flex-1 px-5 py-3 rounded-full border border-ohe-line text-ohe-ink text-sm font-medium hover:bg-ohe-panel-tint transition-colors"
               >
-                Annuler
+                Revenir
               </button>
               <button
                 type="button"
                 onClick={async () => {
                   setShowExitModal(false);
-                  await submitAnswer(null);
+                  if (!data || submitting) return;
+
+                  const timeSpent = Math.round((Date.now() - questionStartRef.current) / 1000);
+                  try {
+                    await fetch('/api/test/answer', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        questionId: data.question.id,
+                        selectedOptionIndex: null,
+                        timeSpent,
+                      }),
+                    });
+                  } catch (e) {
+                    console.error(e);
+                  }
                   router.push('/welcome');
                 }}
                 className="flex-1 px-5 py-3 rounded-full bg-ohe-ink text-white text-sm font-medium hover:opacity-90 transition-opacity"

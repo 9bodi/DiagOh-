@@ -184,14 +184,17 @@ export default async function ResultPage() {
                 <PrimaryButton>Télécharger mon bilan PDF</PrimaryButton>
               </a>
               <div className="inline-flex items-center gap-3">
-                <button
-                  disabled
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-ohe-line text-ohe-muted cursor-not-allowed opacity-60"
-                  style={{ fontFamily: 'var(--font-instrument-sans)' }}
-                >
-                  Télécharger mon badge LinkedIn
-                </button>
-                <Badge tone="muted">Prochainement</Badge>
+               <a
+  href={`/api/badge/${session.user.id}`}
+  download="badge-ohe.png"
+  target="_blank"
+  rel="noopener noreferrer"
+  className="inline-flex items-center justify-center px-6 py-3 rounded-full border border-ohe-ink text-ohe-ink hover:bg-ohe-ink hover:text-white transition-colors font-medium"
+>
+  Télécharger mon badge LinkedIn
+</a>
+
+
               </div>
             </div>
           </div>

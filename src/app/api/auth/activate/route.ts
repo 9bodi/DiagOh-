@@ -2,12 +2,17 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { CURRENT_CONSENT_VERSION } from '@/lib/consent';
 
 const schema = z.object({
   token: z.string().min(1),
   firstName: z.string().min(1).max(50),
   lastName: z.string().min(1).max(50),
   password: z.string().min(8).max(100),
+  consent: z.boolean().refine((val) => val === true, {
+  message: 'Vous devez accepter la politique de confidentialité et les CGU.',
+}),
+
 });
 
 export async function POST(request: Request) {
@@ -15,7 +20,11 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Données invalides' }, { status: 400 });
+    const firstIssue = parsed.error.issues[0];
+    return NextResponse.json(
+      { error: firstIssue?.message ?? 'Données invalides' },
+      { status: 400 }
+    );
   }
 
   const { token, firstName, lastName, password } = parsed.data;
@@ -38,29 +47,29 @@ export async function POST(request: Request) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-const updated = await prisma.user.update({
-  where: { id: user.id },
-  data: {
-    firstName,
-    lastName,
-    passwordHash,
-    passwordCreated: true,
-    magicLinkToken: null,
-    magicLinkExpiresAt: null,
-  },
-  select: { role: true },
-});
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      firstName,
+      lastName,
+      passwordHash,
+      passwordCreated: true,
+      consentedAt: new Date(),
+      consentVersion: CURRENT_CONSENT_VERSION,
+      magicLinkToken: null,
+      magicLinkExpiresAt: null,
+    },
+    select: { role: true },
+  });
 
-const readySession = await prisma.testSession.findFirst({
-  where: { userId: user.id, status: 'READY_TO_START' },
-  select: { id: true },
-});
+  const readySession = await prisma.testSession.findFirst({
+    where: { userId: user.id, status: 'READY_TO_START' },
+    select: { id: true },
+  });
 
-return NextResponse.json({
-  success: true,
-  role: updated.role,
-  hasReadySession: !!readySession,
-});
-
-
+  return NextResponse.json({
+    success: true,
+    role: updated.role,
+    hasReadySession: !!readySession,
+  });
 }

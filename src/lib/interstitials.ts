@@ -50,9 +50,54 @@ export const INTERSTITIALS: Record<number, InterstitialConfig | null> = {
     ctaLabel: 'Je suis prêt(e), continuer',
   },
 
-  5: null, // TODO OHé : texte pour bloc Syntaxe
-  6: null, // TODO OHé : texte pour bloc Compréhension
-  7: null, // TODO OHé : texte pour bloc Questionnaire déclaratif
+  5: {
+    eyebrow: '✱ Nouvelle section',
+    title: 'Syntaxe',
+    body: [
+      "Les phrases que vous allez voir portent sur l'ordre des mots et la construction grammaticale.",
+      "Votre tâche : identifier, parmi les propositions, celle dont la construction respecte les règles de la syntaxe française (accords, ponctuation, structure).",
+      "Prenez votre temps pour lire — chaque question est chronométrée séparément.",
+    ],
+    example: {
+      label: 'Exemple',
+      items: [
+        { text: "L'homme à qui je pense est parti.", highlight: 'correct', caption: 'construction correcte' },
+        { text: "L'homme que je pense est parti.", highlight: 'wrong', caption: 'pronom relatif incorrect' },
+        { text: "L'homme dont je pense est parti.", highlight: 'wrong', caption: 'pronom relatif inadapté' },
+      ],
+    },
+    ctaLabel: 'Je suis prêt(e), continuer',
+  },
+
+  6: {
+    eyebrow: '✱ Nouvelle section',
+    title: 'Compréhension écrite',
+    body: [
+      "Les textes que vous allez lire sont extraits de situations professionnelles courantes.",
+      "Votre tâche : identifier, parmi les propositions, celle qui correspond au sens du texte (information explicite, sens implicite ou reformulation).",
+      "Prenez votre temps pour lire le texte et la question — chaque question est chronométrée séparément.",
+    ],
+    example: {
+      label: 'Exemple',
+      items: [
+        { text: 'Le rendez-vous est reporté à demain.', highlight: 'correct', caption: 'reformulation fidèle' },
+        { text: 'Le rendez-vous est annulé.', highlight: 'wrong', caption: 'sens différent' },
+        { text: 'Le rendez-vous a eu lieu hier.', highlight: 'wrong', caption: 'temporalité incorrecte' },
+      ],
+    },
+    ctaLabel: 'Je suis prêt(e), continuer',
+  },
+
+  7: {
+    eyebrow: '✱ Dernière section',
+    title: 'Questionnaire personnel',
+    body: [
+      "Cette dernière section n'évalue plus vos connaissances mais votre rapport à l'écrit.",
+      "Votre tâche : répondre spontanément, selon ce qui vous correspond le mieux. Il n'y a ni bonne ni mauvaise réponse.",
+      "Prenez votre temps pour lire — chaque question est chronométrée séparément.",
+    ],
+    ctaLabel: 'Je suis prêt(e), continuer',
+  },
 };
 
 /**
