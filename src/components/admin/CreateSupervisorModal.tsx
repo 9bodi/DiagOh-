@@ -113,9 +113,8 @@ export default function CreateSupervisorModal({
               ✱ Nouveau superviseur
             </p>
             <h3 className="font-serif text-2xl text-ohe-slate-900 mb-3 leading-snug">
-  Ajouter un <em className="italic text-ohe-blue">superviseur</em>
-</h3>
-
+              Ajouter un superviseur
+            </h3>
             <p className="text-sm text-ohe-slate-600 leading-relaxed mb-6">
               Le superviseur recevra un email d&apos;invitation pour créer son compte. Il pourra
               consulter uniquement les participants des groupes que vous lui attribuez.
@@ -164,38 +163,36 @@ export default function CreateSupervisorModal({
             </form>
           </>
         ) : (
-  <>
-    <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
-      Invitation envoyée
-    </p>
-    <h3 className="font-serif text-2xl text-ohe-slate-900 mb-3 leading-snug">
-      C&apos;est <em className="italic text-ohe-blue">envoyé</em>
-    </h3>
-    <p className="text-sm text-ohe-slate-600 leading-relaxed mb-4">
-      Un email a été envoyé à <strong className="text-ohe-slate-900">{email}</strong>. Vous pouvez aussi lui transmettre directement le lien :
-    </p>
+          <>
+            <div className="text-3xl mb-3">✅</div>
+            <h3 className="font-serif text-2xl text-ohe-slate-900 mb-3">
+              Superviseur invité
+            </h3>
+            <p className="text-sm text-ohe-slate-600 mb-4">
+              Un email a été envoyé à <strong>{email}</strong>. Vous pouvez aussi lui
+              transmettre directement le lien :
+            </p>
 
-    <div className="p-3 bg-ohe-slate-50 border border-ohe-slate-200 rounded-lg mb-4">
-      <p className="text-xs font-mono text-ohe-slate-700 break-all">{magicLink}</p>
-    </div>
+            <div className="p-3 bg-ohe-slate-50 border border-ohe-slate-200 rounded-lg mb-4">
+              <p className="text-xs font-mono text-ohe-slate-700 break-all">{magicLink}</p>
+            </div>
 
-    <div className="mb-4">
-      <Button variant="secondary" fullWidth onClick={handleCopy}>
-        {copied ? 'Lien copié' : 'Copier le lien'}
-      </Button>
-    </div>
+            <div className="flex gap-3 mb-4">
+              <Button variant="secondary" fullWidth onClick={handleCopy}>
+                {copied ? '✓ Copié !' : '📋 Copier le lien'}
+              </Button>
+            </div>
 
-    <div className="flex gap-3">
-      <Button variant="secondary" fullWidth onClick={handleClose}>
-        Fermer
-      </Button>
-      <Button variant="primary" fullWidth onClick={handleAddAnother}>
-        Ajouter un autre
-      </Button>
-    </div>
-  </>
-)}
-
+            <div className="flex gap-3">
+              <Button variant="secondary" fullWidth onClick={handleClose}>
+                Fermer
+              </Button>
+              <Button variant="primary" fullWidth onClick={handleAddAnother}>
+                Ajouter un autre
+              </Button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

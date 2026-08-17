@@ -75,8 +75,7 @@ const groups = await prisma.group.findMany({
   const adminFirstName = session.user.name?.split(' ')[0] ?? '';
 
   return (
-    <main className="min-h-screen bg-ohe-cream">
-
+    <main className="min-h-screen bg-ohe-slate-50">
       <AdminHeader
   userName={session.user.name ?? session.user.email}
   orgName={org.name}

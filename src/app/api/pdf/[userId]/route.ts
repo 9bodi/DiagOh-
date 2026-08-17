@@ -2,27 +2,21 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { renderToBuffer } from '@react-pdf/renderer';
-import BilanParticipantPDF, {
-  BilanData,
-  BilanBlock,
-} from '@/lib/pdf/BilanParticipantPDF';
+import BilanPDF, { BilanData, BilanBlock, BilanError } from '@/lib/pdf/BilanPDF';
 import React from 'react';
-import fs from 'fs';
-import path from 'path';
 
-
-const BLOCK_LABELS: Record<number, { key: BilanBlock['key']; label: string }> = {
-  1: { key: 'bloc1', label: 'Singulier / Pluriel' },
-  2: { key: 'bloc2', label: 'Conjugaison' },
-  3: { key: 'bloc3', label: 'Participe passé' },
-  4: { key: 'bloc4', label: 'Orthographe lexicale' },
-  5: { key: 'bloc5', label: 'Syntaxe' },
-  6: { key: 'bloc6', label: 'Compréhension' },
+const BLOCK_LABELS: Record<number, string> = {
+  1: 'Singulier / Pluriel',
+  2: 'Conjugaison',
+  3: 'Participe passé',
+  4: 'Orthographe lexicale',
+  5: 'Syntaxe',
+  6: 'Compréhension',
 };
 
 export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ userId: string }> },
+  request: Request,
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   const session = await auth();
   if (!session?.user) {
@@ -47,6 +41,7 @@ export async function GET(
     return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
   }
 
+  // Vérif autorisation
   const isOwner = session.user.id === userId;
   const isAdminSameOrg =
     session.user.role === 'ADMIN' &&
@@ -61,40 +56,61 @@ export async function GET(
   if (!lastSession || !lastSession.completedAt) {
     return NextResponse.json(
       { error: 'Aucun test terminé pour cet utilisateur' },
-      { status: 404 },
+      { status: 404 }
     );
   }
 
+  // Récupère toutes les réponses avec la question liée
   const answers = await prisma.answer.findMany({
     where: { testSessionId: lastSession.id },
     include: { question: true },
   });
 
-  const proceduralAnswers = answers.filter((a) => a.question.type === 'PROCEDURAL');
-  const correctTotal = proceduralAnswers.filter((a) => a.isCorrect).length;
+  // On ne garde que les réponses procédurales (blocs 1 à 6)
+  const proceduralAnswers = answers.filter(a => a.question.type === 'PROCEDURAL');
+  const correctTotal = proceduralAnswers.filter(a => a.isCorrect).length;
 
+  // ===== Détail par bloc =====
   const blocks: BilanBlock[] = [];
-  for (let n = 1; n <= 6; n++) {
-    const blockAnswers = proceduralAnswers.filter((a) => a.question.blockNumber === n);
-    const correctCount = blockAnswers.filter((a) => a.isCorrect).length;
-    const scoreKey = `scoreBloc${n}` as keyof typeof lastSession;
+  for (let blockNum = 1; blockNum <= 6; blockNum++) {
+    const blockAnswers = proceduralAnswers.filter(
+      a => a.question.blockNumber === blockNum
+    );
+    const correctCount = blockAnswers.filter(a => a.isCorrect).length;
+    const scoreKey = `scoreBloc${blockNum}` as keyof typeof lastSession;
     const score = (lastSession[scoreKey] as number | null) ?? 0;
     blocks.push({
-      key: BLOCK_LABELS[n].key,
-      label: BLOCK_LABELS[n].label,
+      label: BLOCK_LABELS[blockNum],
       score,
       correctCount,
     });
   }
 
+  // ===== Erreurs (réponses procédurales incorrectes) =====
+  const errors: BilanError[] = proceduralAnswers
+    .filter(a => !a.isCorrect)
+    .map(a => {
+      const options = a.question.options as string[];
+      const correctIdx = a.question.correctAnswerIndex ?? 0;
+      const userIdx = a.selectedOptionIndex;
+      return {
+        blockLabel: a.question.blockNumber
+          ? BLOCK_LABELS[a.question.blockNumber]
+          : 'Question',
+        questionText: a.question.questionText,
+        userAnswer:
+          userIdx !== null && userIdx !== undefined ? options[userIdx] : null,
+        correctAnswer: options[correctIdx],
+      };
+    });
+
+  // Référence du bilan
   const orgSlug = (targetUser.organization?.name ?? 'OHE')
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '')
     .slice(0, 10);
   const d = new Date(lastSession.completedAt);
   const reference = `OHE-${orgSlug}-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
-const logoPath = path.join(process.cwd(), 'public/img/logos/ohe-logo.png');
-const logoDataUri = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
 
   const data: BilanData = {
     firstName: targetUser.firstName ?? '',
@@ -106,15 +122,12 @@ const logoDataUri = `data:image/png;base64,${fs.readFileSync(logoPath).toString(
     scoreProcedural: lastSession.scoreProcedural ?? 0,
     correctTotal,
     blocks,
-    quadrant: (lastSession.quadrant ?? null) as 1 | 2 | 3 | 4 | null,
-    scoreAdaptation: lastSession.scoreAdaptation ?? null,
-    scoreInteret: lastSession.scoreInteret ?? null,
+    errors,
     reference,
-    logoDataUri,
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const element = React.createElement(BilanParticipantPDF, { data }) as any;
+  const element = React.createElement(BilanPDF, { data }) as any;
   const buffer = await renderToBuffer(element);
 
   const filename = `bilan-${targetUser.lastName ?? 'user'}-${targetUser.firstName ?? ''}.pdf`

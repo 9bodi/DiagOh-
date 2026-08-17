@@ -123,18 +123,17 @@ export default function UserActions({
           </ActionLink>
         )}
         {canDownloadPdf && (
-  <a
-    href={`/api/pdf/client/${userId}`}
-    target="_blank"
-    rel="noopener noreferrer"
-    className="px-2.5 py-1 rounded-md text-[11px] font-medium text-ohe-blue hover:bg-ohe-blue/[0.06] transition-colors"
-    title="Télécharger le bilan client détaillé"
-  >
-    Bilan PDF
-  </a>
-)}
+          <a
+            href={`/api/pdf/client/${userId}`}
 
-
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2.5 py-1 rounded-md text-[11px] font-medium text-ohe-blue hover:bg-ohe-blue/[0.06] transition-colors"
+            title="Télécharger le bilan PDF"
+          >
+            Bilan PDF
+          </a>
+        )}
         {canReset && (
           <ActionLink onClick={() => setResetModalOpen(true)} tone="orange" title="Réinitialiser le test">
             Reset
