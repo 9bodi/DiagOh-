@@ -48,7 +48,8 @@ export default async function SupervisorsPage() {
       <AdminHeader
   userName={session.user.name ?? session.user.email}
   orgName={organization?.name ?? ''}
-  currentPath="/users"
+  currentPath="/supervisors"
+
   userRole={session.user.role}
   isImpersonating={session.user.isImpersonating}   // ← AJOUT
 />

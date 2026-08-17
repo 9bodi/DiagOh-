@@ -105,7 +105,8 @@ export default async function ResultsPage() {
   const dominantLevel = Object.entries(levelCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—';
 
   return (
-    <main className="min-h-screen bg-ohe-slate-50">
+    <main className="min-h-screen bg-ohe-cream">
+
      <AdminHeader
   userName={session.user.name ?? session.user.email}
   orgName={org.name}

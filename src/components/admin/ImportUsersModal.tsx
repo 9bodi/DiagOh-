@@ -178,12 +178,17 @@ export default function ImportUsersModal({ isOpen, onClose }: ImportUsersModalPr
     return (
       <div className="fixed inset-0 bg-ohe-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6 z-50">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-lg w-full max-h-[85vh] overflow-y-auto">
-          <div className="text-3xl mb-3">✅</div>
-          <h3 className="font-serif text-2xl text-ohe-slate-900 mb-2">Import terminé</h3>
-          <p className="text-sm text-ohe-slate-600 mb-6">
-            {report.totalRows} ligne{report.totalRows > 1 ? 's' : ''} traitée
-            {report.totalRows > 1 ? 's' : ''}.
-          </p>
+  <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
+    ✱ Import terminé
+  </p>
+  <h3 className="font-serif text-2xl text-ohe-slate-900 mb-3 leading-snug">
+    Import <em className="italic text-ohe-blue">terminé</em>
+  </h3>
+  <p className="text-sm text-ohe-slate-600 mb-6 leading-relaxed">
+    {report.totalRows} ligne{report.totalRows > 1 ? 's' : ''} traitée
+    {report.totalRows > 1 ? 's' : ''}.
+  </p>
+
 
           <div className="grid grid-cols-3 gap-3 mb-6">
             <StatCard label="Créés" value={report.created} accent="green" />
@@ -253,9 +258,10 @@ export default function ImportUsersModal({ isOpen, onClose }: ImportUsersModalPr
         <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
           ✱ Import en masse
         </p>
-        <h3 className="font-serif text-2xl text-ohe-slate-900 mb-2 leading-snug">
-          Importer des participants
-        </h3>
+       <h3 className="font-serif text-2xl text-ohe-slate-900 mb-3 leading-snug">
+  Importer des <em className="italic text-ohe-blue">participants</em>
+</h3>
+
         <p className="text-sm text-ohe-slate-600 mb-5 leading-relaxed">
           Format attendu : deux colonnes <code className="text-xs bg-ohe-slate-100 px-1.5 py-0.5 rounded">email</code>{' '}
           (obligatoire) et <code className="text-xs bg-ohe-slate-100 px-1.5 py-0.5 rounded">group</code>{' '}
@@ -263,19 +269,21 @@ export default function ImportUsersModal({ isOpen, onClose }: ImportUsersModalPr
         </p>
 
         <div className="flex gap-3 mb-5">
-          <a
-            href="/api/admin/import-users/template?format=csv"
-            className="text-xs text-ohe-blue hover:underline"
-          >
-            📥 Template CSV
-          </a>
-          <a
-            href="/api/admin/import-users/template?format=xlsx"
-            className="text-xs text-ohe-blue hover:underline"
-          >
-            📥 Template Excel
-          </a>
-        </div>
+  <a
+    href="/api/admin/import-users/template?format=csv"
+    className="text-xs text-ohe-blue hover:underline"
+  >
+    Télécharger le template CSV
+  </a>
+  <span className="text-xs text-ohe-slate-300">·</span>
+  <a
+    href="/api/admin/import-users/template?format=xlsx"
+    className="text-xs text-ohe-blue hover:underline"
+  >
+    Template Excel
+  </a>
+</div>
+
 
         <label
           htmlFor="import-file"
