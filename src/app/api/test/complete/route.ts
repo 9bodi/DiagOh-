@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma';
 import { TestStatus } from '@prisma/client';
 import { getActiveSession } from '@/lib/test-session';
 import { computeAndSaveScores } from '@/lib/scoring';
+import { sendResultsAvailableEmail } from '@/lib/email';
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://diag-oh.vercel.app';
 
 export async function POST() {
   const session = await auth();
@@ -39,6 +42,29 @@ export async function POST() {
       creditConsumed: true,
     },
   });
+
+  // ============================================================================
+  // NOTIFICATION EMAIL au participant (best-effort, ne bloque pas la réponse HTTP)
+  // ============================================================================
+  try {
+    const participant = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: {
+        organization: { select: { name: true } },
+      },
+    });
+
+    if (participant?.email && participant.organization) {
+      await sendResultsAvailableEmail({
+        to: participant.email,
+        firstName: participant.firstName,
+        organizationName: participant.organization.name,
+        appUrl: APP_URL,
+      });
+    }
+  } catch (err) {
+    console.error('❌ Failed to send results email:', err);
+  }
 
   return NextResponse.json({
     completed: true,

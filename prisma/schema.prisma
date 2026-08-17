@@ -97,6 +97,8 @@ model User {
   groupId             String?       // ← NOUVEAU (participants)
   magicLinkToken      String?       @unique
   magicLinkExpiresAt  DateTime?
+    passwordResetToken     String?       @unique
+  passwordResetExpiresAt DateTime?
   passwordCreated     Boolean       @default(false)
   consentedAt         DateTime?
   consentVersion      String?
@@ -108,6 +110,7 @@ model User {
   supervisedGroups    Group[]       @relation("GroupSupervisors")  // ← NOUVEAU (superviseurs)
   testSessions        TestSession[]
 
+  @@index([passwordResetToken])
   @@index([organizationId])
   @@index([groupId])         // ← NOUVEAU
   @@index([magicLinkToken])

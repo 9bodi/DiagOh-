@@ -110,7 +110,7 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <div className="pt-2">
+                            <div className="pt-2 space-y-4">
                 <PrimaryButton
                   type="submit"
                   disabled={loading}
@@ -118,7 +118,15 @@ export default function LoginPage() {
                 >
                   {loading ? 'Connexion…' : 'Se connecter'}
                 </PrimaryButton>
+
+                <Link
+                  href="/forgot-password"
+                  className="block text-sm text-ohe-muted hover:text-ohe-ink transition-colors"
+                >
+                  Mot de passe oublié ?
+                </Link>
               </div>
+
             </form>
           </div>
         </div>
