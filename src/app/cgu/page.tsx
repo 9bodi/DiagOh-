@@ -124,7 +124,7 @@ export default function CGUPage() {
 
         <h2>14. Contact</h2>
         <p>
-          Pour toute question relative aux présentes CGU :{' '}
+          Pour toute question relative aux présentes CGU:{' '}
           <a href="mailto:rgpd@orthographe-heros.fr">rgpd@orthographe-heros.fr</a>.
         </p>
       </article>
