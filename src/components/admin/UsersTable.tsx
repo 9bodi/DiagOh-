@@ -3,19 +3,29 @@
 import UserActions from './UserActions';
 import {
   getVisibleColumns,
+  getAdminStatus,
+  getEffectiveTestStatus,
   type UserRow,
   type ColumnKey,
   type SortState,
 } from './table/userTableColumns';
 
+
 export type { UserRow };
 
-const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+// Badges Statut candidat (Importé / Inscrit)
+const ADMIN_STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  IMPORTED:   { label: 'Importé', className: 'bg-ohe-slate-100 text-ohe-slate-600' },
+  REGISTERED: { label: 'Inscrit', className: 'bg-emerald-50 text-emerald-700' },
+};
+
+// Badges Statut test (En attente / Démarré / En cours / Terminé / Hors délais)
+const TEST_STATUS_BADGE: Record<string, { label: string; className: string }> = {
   PENDING:        { label: 'En attente',   className: 'bg-ohe-slate-100 text-ohe-slate-600' },
-  READY_TO_START: { label: 'Prêt',         className: 'bg-ohe-blue/10 text-ohe-blue' },
+  READY_TO_START: { label: 'Démarré',      className: 'bg-ohe-blue/10 text-ohe-blue' },
   IN_PROGRESS:    { label: 'En cours',     className: 'bg-ohe-orange/10 text-ohe-orange' },
   COMPLETED:      { label: 'Terminé',      className: 'bg-emerald-50 text-emerald-700' },
-  EXPIRED:        { label: 'Expiré',       className: 'bg-red-50 text-red-700' },
+  EXPIRED:        { label: 'Hors délais',  className: 'bg-red-50 text-red-700' },
   RESET:          { label: 'Réinitialisé', className: 'bg-ohe-slate-100 text-ohe-slate-600' },
 };
 
@@ -165,7 +175,6 @@ function renderCell(key: ColumnKey, u: UserRow, ctx: CellContext) {
   const isSelected = ctx.selectedIds.includes(u.id);
   const canEditDeadline =
     u.status === 'READY_TO_START' || u.status === 'IN_PROGRESS' || u.status === 'EXPIRED';
-  const statusInfo = STATUS_BADGE[u.status] ?? STATUS_BADGE.PENDING;
 
   switch (key) {
     case 'select':
@@ -206,19 +215,26 @@ function renderCell(key: ColumnKey, u: UserRow, ctx: CellContext) {
         </button>
       );
 
-    case 'status':
+    case 'adminStatus': {
+      const admin = getAdminStatus(u);
+      const info = ADMIN_STATUS_BADGE[admin];
       return (
-        <div className="flex flex-wrap gap-1.5">
-          <span className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium ${statusInfo.className}`}>
-            {statusInfo.label}
-          </span>
-          {!u.passwordCreated && (
-            <span className="inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-amber-50 text-amber-700">
-              Non inscrit
-            </span>
-          )}
-        </div>
+        <span className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium ${info.className}`}>
+          {info.label}
+        </span>
       );
+    }
+
+    case 'testStatus': {
+  const effectiveStatus = getEffectiveTestStatus(u);
+  const info = TEST_STATUS_BADGE[effectiveStatus] ?? TEST_STATUS_BADGE.PENDING;
+  return (
+    <span className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-medium ${info.className}`}>
+      {info.label}
+    </span>
+  );
+}
+
 
     case 'deadline':
       return u.deadline ? (

@@ -1,5 +1,3 @@
-import type { ReactNode } from 'react';
-
 export interface UserRow {
   id: string;
   email: string;
@@ -23,7 +21,8 @@ export type ColumnKey =
   | 'select'
   | 'participant'
   | 'group'
-  | 'status'
+  | 'adminStatus'
+  | 'testStatus'
   | 'deadline'
   | 'level'
   | 'score'
@@ -43,20 +42,21 @@ export interface ColumnConfig {
   visibility: ColumnVisibility;
   align?: 'left' | 'center' | 'right';
   width?: string;
-  sortable?: boolean; // ← NOUVEAU
+  sortable?: boolean;
 }
 
 export const USER_TABLE_COLUMNS: ColumnConfig[] = [
-  { key: 'select',      label: '',            visibility: 'always', align: 'center', width: 'w-12' },
-  { key: 'participant', label: 'Participant', visibility: 'always', sortable: true },
-  { key: 'group',       label: 'Groupe',      visibility: 'always' },
-  { key: 'status',      label: 'Statut',      visibility: 'always' },
-  { key: 'deadline',    label: 'Deadline',    visibility: 'active-context', sortable: true },
-  { key: 'level',       label: 'Niveau',      visibility: 'completed-context' },
-  { key: 'score',       label: 'Score',       visibility: 'completed-context', sortable: true },
-  { key: 'quadrant',    label: 'Cadran',      visibility: 'completed-context', align: 'center' },
-  { key: 'completedAt', label: 'Terminé le',  visibility: 'completed-context', sortable: true },
-  { key: 'actions',     label: 'Actions',     visibility: 'always', align: 'right' },
+  { key: 'select',      label: '',                visibility: 'always', align: 'center', width: 'w-12' },
+  { key: 'participant', label: 'Participant',     visibility: 'always', sortable: true },
+  { key: 'group',       label: 'Groupe',          visibility: 'always' },
+  { key: 'adminStatus', label: 'Statut candidat', visibility: 'always', sortable: true },
+  { key: 'testStatus',  label: 'Statut test',     visibility: 'always', sortable: true },
+  { key: 'deadline',    label: 'Deadline',        visibility: 'active-context', sortable: true },
+  { key: 'level',       label: 'Niveau',          visibility: 'completed-context' },
+  { key: 'score',       label: 'Score',           visibility: 'completed-context', sortable: true },
+  { key: 'quadrant',    label: 'Cadran',          visibility: 'completed-context', align: 'center' },
+  { key: 'completedAt', label: 'Terminé le',      visibility: 'completed-context', sortable: true },
+  { key: 'actions',     label: 'Actions',         visibility: 'always', align: 'right' },
 ];
 
 export function isColumnVisible(
@@ -88,6 +88,70 @@ export function getVisibleColumns(filter: string, users: UserRow[]): ColumnConfi
   return USER_TABLE_COLUMNS.filter(col => isColumnVisible(col, filter, users));
 }
 
+// ─── Statuts dérivés ───────────────────────────────────────────────
+
+export type AdminStatus = 'IMPORTED' | 'REGISTERED';
+
+export function getAdminStatus(u: UserRow): AdminStatus {
+  return u.passwordCreated ? 'REGISTERED' : 'IMPORTED';
+}
+/**
+ * Retourne le statut test effectif (dérivé).
+ * Si la deadline est passée et le test n'est pas terminé, on force EXPIRED.
+ */
+export function getEffectiveTestStatus(u: UserRow): string {
+  if (u.status === 'COMPLETED') return 'COMPLETED';
+  if (u.deadline && new Date(u.deadline).getTime() < Date.now()) {
+    return 'EXPIRED';
+  }
+  return u.status;
+}
+
+/**
+ * Libellés du statut test (renommés côté UI).
+ */
+export const TEST_STATUS_LABELS: Record<string, string> = {
+  PENDING:        'En attente',
+  READY_TO_START: 'Démarré',
+  IN_PROGRESS:    'En cours',
+  COMPLETED:      'Terminé',
+  EXPIRED:        'Hors délais',
+  RESET:          'Réinitialisé',
+};
+
+/**
+ * Rang du statut test pour tri logique.
+ */
+export function getTestStatusRank(status: string): number {
+  switch (status) {
+    case 'PENDING':        return 0;
+    case 'READY_TO_START': return 1;
+    case 'IN_PROGRESS':    return 2;
+    case 'EXPIRED':        return 3;
+    case 'COMPLETED':      return 4;
+    default:               return 5;
+  }
+}
+
+
+/**
+ * Rang pour tri par défaut (le plus urgent = 0).
+ * Importé → Inscrit+En attente → Démarré → En cours → Hors délais → Terminé
+ */
+export function getDefaultOrderRank(u: UserRow): number {
+  if (!u.passwordCreated) return 0;
+  const effectiveStatus = getEffectiveTestStatus(u);
+  switch (effectiveStatus) {
+    case 'PENDING':        return 1;
+    case 'READY_TO_START': return 2;
+    case 'IN_PROGRESS':    return 3;
+    case 'EXPIRED':        return 4;
+    case 'COMPLETED':      return 5;
+    default:               return 6;
+  }
+}
+
+
 // ─── Tri ───────────────────────────────────────────────────────────
 
 export type SortDirection = 'asc' | 'desc';
@@ -97,16 +161,18 @@ export interface SortState {
   direction: SortDirection;
 }
 
-/**
- * Retourne une valeur comparable pour une colonne donnée.
- * Les null/undefined sont toujours placés en fin (peu importe la direction).
- */
 export function getSortValue(u: UserRow, key: ColumnKey): string | number | null {
   switch (key) {
     case 'participant': {
       const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
       return (name || u.email).toLowerCase();
     }
+    case 'adminStatus':
+      // Importé (0) avant Inscrit (1)
+      return u.passwordCreated ? 1 : 0;
+    case 'testStatus':
+  return getTestStatusRank(getEffectiveTestStatus(u));
+
     case 'score':
       return u.score;
     case 'deadline':
@@ -119,13 +185,27 @@ export function getSortValue(u: UserRow, key: ColumnKey): string | number | null
 }
 
 export function sortUsers(users: UserRow[], sort: SortState | null): UserRow[] {
-  if (!sort) return users;
+  // Tri par défaut (ordre urgent) si pas de tri explicite
+  if (!sort) {
+    const arr = [...users];
+    arr.sort((a, b) => {
+      const ra = getDefaultOrderRank(a);
+      const rb = getDefaultOrderRank(b);
+      if (ra !== rb) return ra - rb;
+      // Tie-break : nom alphabétique
+      const na = [a.firstName, a.lastName].filter(Boolean).join(' ').toLowerCase() || a.email;
+      const nb = [b.firstName, b.lastName].filter(Boolean).join(' ').toLowerCase() || b.email;
+      return na.localeCompare(nb, 'fr');
+    });
+    return arr;
+  }
+
   const arr = [...users];
   arr.sort((a, b) => {
     const va = getSortValue(a, sort.key);
     const vb = getSortValue(b, sort.key);
     if (va === null && vb === null) return 0;
-    if (va === null) return 1;   // null toujours en fin
+    if (va === null) return 1;
     if (vb === null) return -1;
     if (typeof va === 'number' && typeof vb === 'number') {
       return sort.direction === 'asc' ? va - vb : vb - va;
@@ -139,7 +219,6 @@ export function sortUsers(users: UserRow[], sort: SortState | null): UserRow[] {
 
 // ─── Recherche ─────────────────────────────────────────────────────
 
-/** Normalise une chaîne : minuscules + sans accents. */
 function normalize(s: string): string {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
