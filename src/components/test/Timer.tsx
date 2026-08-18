@@ -29,8 +29,9 @@ export default function Timer({ duration, onExpire, resetKey }: TimerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft]);
 
-  const size = 80;
-const radius = 36;
+  const size = 110;
+  const radius = 50;
+
 
   const circumference = 2 * Math.PI * radius;
   const progress = (timeLeft / duration) * circumference;
@@ -77,9 +78,8 @@ const radius = 36;
           className="transition-all duration-1000 ease-linear"
         />
       </svg>
-      <span
-className={`relative font-serif italic text-[28px] font-medium tabular-nums ${textColor}`}
-        style={{ letterSpacing: '-0.02em' }}
+                  <span
+        className={`relative font-serif italic text-[44px] tabular-nums ${textColor}`}
       >
         {timeLeft}
       </span>

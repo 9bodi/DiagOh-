@@ -228,11 +228,24 @@ export default function TestRunner({ userName }: { userName: string }) {
 
   return (
     <main className="h-screen bg-ohe-bg text-ohe-ink flex flex-col overflow-hidden">
-      {/* Header */}
-      <header className="px-6 sm:px-10 lg:px-14 pt-4 pb-3 flex items-center justify-between gap-4 border-b border-ohe-line shrink-0">
-        <Logo size={40} withLabel />
+            {/* Header */}
+      <header className="px-6 sm:px-10 lg:px-14 pt-4 pb-3 grid grid-cols-3 items-center gap-4 border-b border-ohe-line shrink-0">
+        {/* Gauche : Logo */}
+        <div className="flex justify-start">
+          <Logo size={40} withLabel />
+        </div>
 
-        <div className="flex items-center gap-6 sm:gap-8">
+        {/* Centre : Timer proéminent */}
+        <div className="flex justify-center">
+          <Timer
+            duration={question.timeLimit}
+            resetKey={question.id}
+            onExpire={() => submitAnswer(selectedIndex)}
+          />
+        </div>
+
+        {/* Droite : Compteur de questions */}
+        <div className="flex justify-end">
           <div className="flex flex-col items-end leading-tight">
             <span className="ohe-caption text-ohe-muted">Question</span>
             <span className="font-serif italic text-ohe-accent text-[22px] leading-none mt-1">
@@ -240,13 +253,9 @@ export default function TestRunner({ userName }: { userName: string }) {
               <span className="text-ohe-muted text-[14px]"> / {totalQuestions}</span>
             </span>
           </div>
-          <Timer
-            duration={question.timeLimit}
-            resetKey={question.id}
-            onExpire={() => submitAnswer(selectedIndex)}
-          />
         </div>
       </header>
+
 
       {/* Progress bar fine */}
       <div className="px-6 sm:px-10 lg:px-14">
