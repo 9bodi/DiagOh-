@@ -13,7 +13,6 @@ const schema = z.object({
 export async function POST(request: Request) {
   const session = await auth();
 
-  // 1) Auth étendue à SUPERADMIN et SUPERVISOR
   if (
     !session?.user ||
     (session.user.role !== 'ADMIN' &&
@@ -32,7 +31,6 @@ export async function POST(request: Request) {
 
   const { userId } = parsed.data;
 
-  // 2) Vérification via canManageParticipant
   const canAct = await canManageParticipant(
     session.user.id,
     session.user.role,
@@ -52,25 +50,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
   }
 
+  const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+  let magicLinkUrl: string;
+  let mode: 'invitation' | 'reminder';
+
   if (user.passwordCreated) {
-    return NextResponse.json(
-      { error: 'Cet utilisateur a déjà activé son compte.' },
-      { status: 400 },
-    );
+    // Utilisateur déjà inscrit → rappel vers /login
+    magicLinkUrl = `${baseUrl}/login`;
+    mode = 'reminder';
+  } else {
+    // Non inscrit → nouveau magic link
+    const magicLinkToken = crypto.randomBytes(32).toString('hex');
+    const magicLinkExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { magicLinkToken, magicLinkExpiresAt },
+    });
+
+    magicLinkUrl = `${baseUrl}/magic-link/${magicLinkToken}`;
+    mode = 'invitation';
   }
 
-  const magicLinkToken = crypto.randomBytes(32).toString('hex');
-  const magicLinkExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { magicLinkToken, magicLinkExpiresAt },
-  });
-
-  const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
-  const magicLinkUrl = `${baseUrl}/magic-link/${magicLinkToken}`;
-
-  console.log(`\n📧 Nouveau magic link pour ${user.email}:\n   ${magicLinkUrl}\n`);
+  console.log(`\n📧 ${mode === 'reminder' ? 'Rappel' : 'Magic link'} pour ${user.email}:\n   ${magicLinkUrl}\n`);
 
   try {
     await sendMagicLinkEmail({
@@ -78,10 +80,10 @@ export async function POST(request: Request) {
       magicLinkUrl,
       organizationName: user.organization?.name ?? 'Organisation',
       recipientRole: 'USER',
+      mode,
     });
   } catch (emailErr) {
     console.error('⚠️ Envoi email échoué:', emailErr);
-    // On renvoie le magicLinkUrl pour permettre à l'admin de le copier manuellement
     return NextResponse.json({
       success: true,
       emailFailed: true,

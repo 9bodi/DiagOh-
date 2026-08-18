@@ -35,7 +35,8 @@ export default function UserActions({
   const canDownloadPdf = status === 'COMPLETED' && sessionId;
   const canReset = status === 'IN_PROGRESS' || status === 'COMPLETED';
   const isCompletedReset = status === 'COMPLETED';
-  const canResend = !passwordCreated;
+  const canResend = true;
+
   const willRefundOnDelete = !passwordCreated;
 
   async function handleReset() {

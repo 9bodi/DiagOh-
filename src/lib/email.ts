@@ -166,25 +166,38 @@ interface SendMagicLinkParams {
   magicLinkUrl: string;
   organizationName: string;
   recipientRole: 'ADMIN' | 'USER';
+  mode?: 'invitation' | 'reminder'; // NEW
 }
+
 
 export async function sendMagicLinkEmail({
   to,
   magicLinkUrl,
   organizationName,
   recipientRole,
+  mode = 'invitation', // NEW
 }: SendMagicLinkParams) {
-  const isAdmin = recipientRole === 'ADMIN';
+
+    const isAdmin = recipientRole === 'ADMIN';
+  const isReminder = mode === 'reminder';
 
   const subject = isAdmin
     ? `Votre accès administrateur OHé Diagnostic — ${organizationName}`
-    : `Vous êtes invité·e à passer le diagnostic OHé`;
+    : isReminder
+      ? `Rappel — Votre diagnostic OHé vous attend`
+      : `Vous êtes invité·e à passer le diagnostic OHé`;
 
   const introText = isAdmin
     ? `Vous avez été désigné·e <strong>administrateur·rice</strong> de l'organisation <strong>${organizationName}</strong> sur la plateforme OHé Diagnostic.`
-    : `<strong>${organizationName}</strong> vous invite à passer le diagnostic OHé pour évaluer vos compétences en orthographe et en français.`;
+    : isReminder
+      ? `<strong>${organizationName}</strong> vous a invité·e à passer le diagnostic OHé. Vous n'avez pas encore terminé, prenez un moment dès maintenant pour le compléter.`
+      : `<strong>${organizationName}</strong> vous invite à passer le diagnostic OHé pour évaluer vos compétences en orthographe et en français.`;
 
-  const ctaLabel = isAdmin ? 'Activer mon compte administrateur' : 'Commencer le diagnostic';
+  const ctaLabel = isAdmin
+    ? 'Activer mon compte administrateur'
+    : isReminder
+      ? 'Accéder à mon diagnostic'
+      : 'Commencer le diagnostic';
 
   const rgpdContext = isAdmin
     ? `Vous recevez cet email car <strong>${organizationName}</strong> vous a désigné·e comme administrateur·rice sur la plateforme OHé Diagnostic. Base légale : exécution du contrat entre OHE FORMATION et votre organisation.`
