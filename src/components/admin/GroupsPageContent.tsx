@@ -70,7 +70,7 @@ export default function GroupsPageContent({ groups, orgName }: GroupsPageContent
                   <p className="text-xs text-ohe-slate-600 mt-0.5">
                     {g.participantsCount} participant{g.participantsCount > 1 ? 's' : ''}
                     {g.supervisorsCount > 0 && (
-                      <> · {g.supervisorsCount} superviseur{g.supervisorsCount > 1 ? 's' : ''}</>
+                      <> · {g.supervisorsCount} référent{g.supervisorsCount > 1 ? 's' : ''}</>
                     )}
                   </p>
                 </div>

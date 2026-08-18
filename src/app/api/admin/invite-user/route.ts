@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   // 2) Superviseur : groupId obligatoire
   if (session.user.role === 'SUPERVISOR' && !groupId) {
     return NextResponse.json(
-      { error: 'Un superviseur doit assigner le participant à un de ses groupes' },
+      { error: 'Un référent doit assigner le participant à un de ses groupes' },
       { status: 400 },
     );
   }

@@ -16,13 +16,13 @@ const NAV_ITEMS_BY_ROLE: Record<string, { href: string; label: string }[]> = {
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/users', label: 'Participants' },
     { href: '/groups', label: 'Groupes' },
-    { href: '/supervisors', label: 'Superviseurs' },
+    { href: '/supervisors', label: 'Référents' },
   ],
   ADMIN: [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/users', label: 'Participants' },
     { href: '/groups', label: 'Groupes' },
-    { href: '/supervisors', label: 'Superviseurs' },
+    { href: '/supervisors', label: 'Référents' },
   ],
   SUPERVISOR: [
     { href: '/users', label: 'Participants' },
@@ -37,7 +37,7 @@ export default function AdminHeader({
   isImpersonating = false,
 }: AdminHeaderProps) {
   const navItems = NAV_ITEMS_BY_ROLE[userRole] ?? [];
-  const roleLabel = userRole === 'SUPERVISOR' ? 'Superviseur' : 'Admin';
+  const roleLabel = userRole === 'SUPERVISOR' ? 'Référent' : 'Admin';
 
   return (
     <>

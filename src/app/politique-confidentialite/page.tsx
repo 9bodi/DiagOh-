@@ -71,7 +71,7 @@ export default function PolitiqueConfidentialitePage() {
         <ul>
           <li>À <strong>vous-même</strong>, via votre espace personnel ;</li>
           <li>À l&apos;<strong>administrateur</strong> de l&apos;organisation cliente qui vous a invité ;</li>
-          <li>Au <strong>superviseur</strong> de votre groupe, le cas échéant ;</li>
+          <li>Au <strong>référent</strong> de votre groupe, le cas échéant ;</li>
           <li>À <strong>OHE FORMATION</strong>, en tant qu&apos;éditeur, à des fins de maintenance technique et de support.</li>
         </ul>
 
@@ -145,7 +145,7 @@ export default function PolitiqueConfidentialitePage() {
           <li>Chiffrement en transit (HTTPS/TLS 1.3) ;</li>
           <li>Chiffrement au repos de la base de données ;</li>
           <li>Mots de passe stockés sous forme hashée (bcrypt) ;</li>
-          <li>Contrôle d&apos;accès strict par rôle (participant, administrateur, superviseur) ;</li>
+          <li>Contrôle d&apos;accès strict par rôle (participant, administrateur, référent) ;</li>
           <li>Sauvegardes chiffrées automatiques quotidiennes ;</li>
           <li>Journal d&apos;audit des accès sensibles.</li>
         </ul>

@@ -42,7 +42,7 @@ export default function SupervisorsPageContent({
     const name =
       [supervisor.firstName, supervisor.lastName].filter(Boolean).join(' ') ||
       supervisor.email;
-    if (!confirm(`Supprimer le superviseur « ${name} » ? Cette action est irréversible.`)) {
+    if (!confirm(`Supprimer le référent « ${name} » ? Cette action est irréversible.`)) {
       return;
     }
     setDeletingId(supervisor.id);
@@ -56,7 +56,7 @@ export default function SupervisorsPageContent({
         toast.error(data.error || 'Erreur lors de la suppression');
         return;
       }
-      toast.success(`Superviseur « ${name} » supprimé`);
+      toast.success(`Référent « ${name} » supprimé`);
       router.refresh();
     } catch (e) {
       setDeletingId(null);
@@ -70,23 +70,23 @@ export default function SupervisorsPageContent({
         <div>
           
           <h1 className="font-serif text-4xl text-ohe-slate-900 mb-2">
-            Vos superviseurs
+            Vos référents
           </h1>
           <p className="text-sm text-ohe-slate-600">
-            Chaque superviseur consulte uniquement les participants des groupes qui lui sont
+            Chaque référent consulte uniquement les participants des groupes qui lui sont
             attribués.
           </p>
         </div>
         <Button variant="primary" onClick={() => setIsCreateOpen(true)}>
-          + Ajouter un superviseur
+          + Ajouter un référent
         </Button>
       </div>
 
       {supervisors.length === 0 ? (
   <div className="bg-white rounded-2xl border border-ohe-slate-200 p-10 text-center">
-    <p className="text-ohe-slate-600 mb-4">Aucun superviseur pour le moment.</p>
+    <p className="text-ohe-slate-600 mb-4">Aucun référent pour le moment.</p>
     <Button variant="primary" onClick={() => setIsCreateOpen(true)}>
-      + Ajouter un superviseur
+      + Ajouter un référent
     </Button>
   </div>
 ) : (
@@ -96,7 +96,7 @@ export default function SupervisorsPageContent({
             <thead className="bg-ohe-slate-50 border-b border-ohe-slate-200">
               <tr>
                 <th className="text-left px-6 py-3 text-xs font-mono uppercase tracking-[0.12em] text-ohe-slate-600">
-                  Superviseur
+                  Référent
                 </th>
                 <th className="text-left px-6 py-3 text-xs font-mono uppercase tracking-[0.12em] text-ohe-slate-600">
                   Groupes

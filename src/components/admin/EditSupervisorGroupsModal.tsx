@@ -94,7 +94,7 @@ export default function EditSupervisorGroupsModal({
         </p>
         <h3 className="font-serif text-2xl text-ohe-slate-900 mb-3 leading-snug">{name}</h3>
         <p className="text-sm text-ohe-slate-600 mb-6">
-          Choisissez les groupes que ce superviseur peut consulter.
+          Choisissez les groupes que ce référent peut consulter.
         </p>
 
         <div className="mb-4">

@@ -66,7 +66,7 @@ export default function LoginPage() {
             </h1>
 
             <p className="mt-5 lg:mt-6 text-base lg:text-[17px] leading-[1.55] text-ohe-muted text-pretty">
-              Un seul identifiant pour tous les rôles — participant, administrateur ou superviseur. Nous vous redirigeons automatiquement vers votre espace après connexion.
+              Un seul identifiant pour tous les rôles — participant, administrateur ou référent. Nous vous redirigeons automatiquement vers votre espace après connexion.
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">

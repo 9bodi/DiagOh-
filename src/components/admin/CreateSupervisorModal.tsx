@@ -87,7 +87,7 @@ export default function CreateSupervisorModal({
         toast.error(data.error || 'Erreur lors de la création.');
         return;
       }
-      toast.success(`Superviseur invité (${email})`);
+      toast.success(`Référent invité (${email})`);
       setMagicLink(data.magicLinkUrl);
       router.refresh();
     } catch (err) {
@@ -110,13 +110,13 @@ export default function CreateSupervisorModal({
         {!magicLink ? (
           <>
             <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
-              ✱ Nouveau superviseur
+              ✱ Nouveau référent
             </p>
             <h3 className="font-serif text-2xl text-ohe-slate-900 mb-3 leading-snug">
-              Ajouter un superviseur
+              Ajouter un référent
             </h3>
             <p className="text-sm text-ohe-slate-600 leading-relaxed mb-6">
-              Le superviseur recevra un email d&apos;invitation pour créer son compte. Il pourra
+              Le référent recevra un email d&apos;invitation pour créer son compte. Il pourra
               consulter uniquement les participants des groupes que vous lui attribuez.
             </p>
 
@@ -166,7 +166,7 @@ export default function CreateSupervisorModal({
           <>
             <div className="text-3xl mb-3">✅</div>
             <h3 className="font-serif text-2xl text-ohe-slate-900 mb-3">
-              Superviseur invité
+              Référent invité
             </h3>
             <p className="text-sm text-ohe-slate-600 mb-4">
               Un email a été envoyé à <strong>{email}</strong>. Vous pouvez aussi lui

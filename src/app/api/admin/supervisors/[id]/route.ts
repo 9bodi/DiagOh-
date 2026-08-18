@@ -35,7 +35,7 @@ export async function PATCH(
     where: { id, organizationId: orgId, role: 'SUPERVISOR' },
   });
   if (!supervisor) {
-    return NextResponse.json({ error: 'Superviseur introuvable.' }, { status: 404 });
+    return NextResponse.json({ error: 'Référent introuvable.' }, { status: 404 });
   }
 
   // Vérifier que les groupes appartiennent à l'organisation
@@ -91,7 +91,7 @@ export async function DELETE(
     where: { id, organizationId: orgId, role: 'SUPERVISOR' },
   });
   if (!supervisor) {
-    return NextResponse.json({ error: 'Superviseur introuvable.' }, { status: 404 });
+    return NextResponse.json({ error: 'Référent introuvable.' }, { status: 404 });
   }
 
   await prisma.user.delete({ where: { id } });

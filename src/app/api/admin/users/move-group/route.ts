@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   // car il perdrait la visibilité sur ce participant immédiatement.
   if (session.user.role === 'SUPERVISOR' && groupId === null) {
     return NextResponse.json(
-      { error: 'Un superviseur ne peut pas détacher un participant de tout groupe' },
+      { error: 'Un référent ne peut pas détacher un participant de tout groupe' },
       { status: 403 },
     );
   }
