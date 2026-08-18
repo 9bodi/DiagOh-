@@ -42,10 +42,13 @@ export function formatDeadline(deadline: Date): string {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Europe/Paris',
+    
   })
     .format(deadline)
     .replace(':', 'h');
 }
+
 
 /**
  * Renvoie le nombre d'heures entre maintenant et la deadline.

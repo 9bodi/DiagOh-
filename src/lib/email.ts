@@ -149,10 +149,13 @@ function formatDeadline(date: Date): string {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    timeZone: 'Europe/Paris',
+    
   })
     .format(date)
     .replace(':', 'h');
 }
+
 
 // ============================================================================
 // 1. MAGIC LINK — Invitation admin ou participant
