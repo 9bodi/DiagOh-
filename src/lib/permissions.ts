@@ -139,3 +139,37 @@ export async function canAssignToGroup(
 
   return false;
 }
+export function canManageAdmins(
+  actorRole: string,
+  actorOrgId: string | null,
+  targetOrgId: string
+): boolean {
+  if (actorRole === 'SUPERADMIN') return true;
+  if (actorRole === 'ADMIN' && actorOrgId === targetOrgId) return true;
+  return false;
+}
+
+/**
+ * Vérifie qu'on peut supprimer un admin :
+ * - au moins 1 autre admin doit rester dans l'orga
+ * - pas d'auto-suppression
+ */
+export async function canDeleteAdmin(
+  actorUserId: string,
+  targetUserId: string,
+  targetOrgId: string
+): Promise<{ ok: boolean; reason?: string }> {
+  if (actorUserId === targetUserId) {
+    return { ok: false, reason: "Vous ne pouvez pas vous supprimer vous-même." };
+  }
+
+  const adminsCount = await prisma.user.count({
+    where: { organizationId: targetOrgId, role: 'ADMIN' },
+  });
+
+  if (adminsCount <= 1) {
+    return { ok: false, reason: "Impossible : une organisation doit conserver au moins un admin." };
+  }
+
+  return { ok: true };
+}

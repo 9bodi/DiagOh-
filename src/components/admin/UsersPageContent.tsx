@@ -31,14 +31,12 @@ interface UsersPageContentProps {
 }
 
 type TestFilterKey = 'all' | 'pending' | 'ready' | 'in_progress' | 'completed' | 'expired';
-type AdminFilterKey = 'all' | 'imported' | 'registered';
 
 export default function UsersPageContent({
   users, orgName, credits, groups, userRole,
 }: UsersPageContentProps) {
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [testFilter, setTestFilter] = useState<TestFilterKey>('all');
-  const [adminFilter, setAdminFilter] = useState<AdminFilterKey>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isActivateOpen, setIsActivateOpen] = useState(false);
@@ -48,72 +46,57 @@ export default function UsersPageContent({
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortState | null>(null);
 
-const testCounts = useMemo(() => {
-  const effective = users.map((u) => getEffectiveTestStatus(u));
-  return {
-    all: users.length,
-    pending: effective.filter((s) => s === 'PENDING').length,
-    ready: effective.filter((s) => s === 'READY_TO_START').length,
-    in_progress: effective.filter((s) => s === 'IN_PROGRESS').length,
-    completed: effective.filter((s) => s === 'COMPLETED').length,
-    expired: effective.filter((s) => s === 'EXPIRED').length,
-  };
-}, [users]);
-
-
-  const adminCounts = useMemo(() => ({
-    all: users.length,
-    imported: users.filter((u) => !u.passwordCreated).length,
-    registered: users.filter((u) => u.passwordCreated).length,
-  }), [users]);
+  const testCounts = useMemo(() => {
+    const effective = users.map((u) => getEffectiveTestStatus(u));
+    return {
+      all: users.length,
+      pending: effective.filter((s) => s === 'PENDING').length,
+      ready: effective.filter((s) => s === 'READY_TO_START').length,
+      in_progress: effective.filter((s) => s === 'IN_PROGRESS').length,
+      completed: effective.filter((s) => s === 'COMPLETED').length,
+      expired: effective.filter((s) => s === 'EXPIRED').length,
+    };
+  }, [users]);
 
   const filteredUsers = useMemo(() => {
-    // 1) Filtre statut candidat
-    let list = users.filter((u) => {
-      if (adminFilter === 'imported' && u.passwordCreated) return false;
-      if (adminFilter === 'registered' && !u.passwordCreated) return false;
+    let list = users;
+
+    // 1) Filtre statut test (utilise le statut effectif)
+    list = list.filter((u) => {
+      const eff = getEffectiveTestStatus(u);
+      if (testFilter === 'all') return true;
+      if (testFilter === 'pending' && eff !== 'PENDING') return false;
+      if (testFilter === 'ready' && eff !== 'READY_TO_START') return false;
+      if (testFilter === 'in_progress' && eff !== 'IN_PROGRESS') return false;
+      if (testFilter === 'completed' && eff !== 'COMPLETED') return false;
+      if (testFilter === 'expired' && eff !== 'EXPIRED') return false;
       return true;
     });
 
-// 2) Filtre statut test (utilise le statut effectif)
-list = list.filter((u) => {
-  const eff = getEffectiveTestStatus(u);
-  if (testFilter === 'all') return true;
-  if (testFilter === 'pending' && eff !== 'PENDING') return false;
-  if (testFilter === 'ready' && eff !== 'READY_TO_START') return false;
-  if (testFilter === 'in_progress' && eff !== 'IN_PROGRESS') return false;
-  if (testFilter === 'completed' && eff !== 'COMPLETED') return false;
-  if (testFilter === 'expired' && eff !== 'EXPIRED') return false;
-  return true;
-});
-
-
-
-    // 3) Filtre groupe
+    // 2) Filtre groupe
     list = list.filter((u) => {
       if (groupFilter === 'none' && u.groupId !== null) return false;
       if (groupFilter !== 'all' && groupFilter !== 'none' && u.groupId !== groupFilter) return false;
       return true;
     });
 
-    // 4) Recherche
+    // 3) Recherche
     list = filterUsersBySearch(list, search);
 
-    // 5) Tri (ordre par défaut si sort === null)
+    // 4) Tri (ordre par défaut si sort === null)
     list = sortUsers(list, sort);
 
     return list;
-  }, [users, testFilter, adminFilter, groupFilter, search, sort]);
+  }, [users, testFilter, groupFilter, search, sort]);
 
   const visibleIds = new Set(filteredUsers.map((u) => u.id));
   const cleanSelectedIds = selectedIds.filter((id) => visibleIds.has(id));
 
   const hasActiveFilters =
-    testFilter !== 'all' || adminFilter !== 'all' || groupFilter !== 'all' || search !== '';
+    testFilter !== 'all' || groupFilter !== 'all' || search !== '';
 
   function resetFilters() {
     setTestFilter('all');
-    setAdminFilter('all');
     setGroupFilter('all');
     setSearch('');
     setSort(null);
@@ -246,16 +229,13 @@ list = list.filter((u) => {
                 all: '', pending: 'En attente', ready: 'Démarré', in_progress: 'En cours',
                 completed: 'Terminé', expired: 'Hors délais',
               };
-              const adminLabels: Record<string, string> = {
-                all: '', imported: 'Importé', registered: 'Inscrit',
-              };
               const groupLabel = groupFilter === 'all'
                 ? ''
                 : groupFilter === 'none'
                   ? 'Sans groupe'
                   : groups.find((g) => g.id === groupFilter)?.name ?? '';
               exportUsersToPdf(filteredUsers, orgName, {
-                status: [testLabels[testFilter], adminLabels[adminFilter]].filter(Boolean).join(' · ') || undefined,
+                status: testLabels[testFilter] || undefined,
                 group: groupLabel || undefined,
                 search: search || undefined,
               });
@@ -270,18 +250,6 @@ list = list.filter((u) => {
             </svg>
             PDF
           </button>
-        </div>
-      </div>
-
-      {/* Filtres Statut candidat */}
-      <div className="mb-3">
-        <div className="text-[10px] font-mono uppercase tracking-[0.14em] text-ohe-slate-500 mb-2">
-          Statut candidat
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <FilterTab active={adminFilter === 'all'} onClick={() => setAdminFilter('all')} label="Tous" count={adminCounts.all} />
-          <FilterTab active={adminFilter === 'imported'} onClick={() => setAdminFilter('imported')} label="Importés" count={adminCounts.imported} accent="slate" />
-          <FilterTab active={adminFilter === 'registered'} onClick={() => setAdminFilter('registered')} label="Inscrits" count={adminCounts.registered} accent="green" />
         </div>
       </div>
 

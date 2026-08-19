@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import AdminHeader from '@/components/admin/AdminHeader';
 import InviteCollabButton from '@/components/admin/InviteCollabButton';
 import { getAccessibleGroupIds } from '@/lib/permissions';
+import AdminsListSection from '@/components/admin/AdminsListSection';
+
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -73,7 +75,24 @@ const groups = await prisma.group.findMany({
   const notStartedTests = totalUsers - completedTests - inProgressTests;
 
   const adminFirstName = session.user.name?.split(' ')[0] ?? '';
-
+// Fetch admins de l'organisation (masqué pour supervisor)
+const admins = isSupervisor
+  ? []
+  : await prisma.user.findMany({
+      where: {
+        organizationId: org.id,
+        role: 'ADMIN',
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        passwordCreated: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'asc' },
+    });
   return (
     <main className="min-h-screen bg-ohe-slate-50">
       <AdminHeader
@@ -154,6 +173,16 @@ const groups = await prisma.group.findMany({
 
           </div>
         </div>
+        {/* Section admins (masquée pour supervisor) */}
+{!isSupervisor && (
+  <AdminsListSection
+    admins={admins.map(a => ({ ...a, createdAt: a.createdAt.toISOString() }))}
+    currentUserId={session.user.id}
+    organizationId={org.id}
+    isSuperadmin={session.user.role === 'SUPERADMIN'}
+  />
+)}
+
 
         {/* Quick links */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
