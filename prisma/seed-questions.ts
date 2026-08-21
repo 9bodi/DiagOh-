@@ -121,57 +121,59 @@ const bloc5 = [
 
 // ============ BLOC 6 — Compréhension (25s) ============
 // La consigne générique est dans META.bloc6 ; questionText reste la question spécifique.
+// ============ BLOC 6 — Compréhension (25s) ============
+// La consigne générique est dans META.bloc6 ; questionText reste la question spécifique.
 const bloc6 = [
   {
     source: 'Les commandes passées avant 16 h sont expédiées le jour même. Après 16 h, elles sont traitées le lendemain ouvré.',
     q: 'Une commande passée à 17 h un jeudi sera donc expédiée :',
-    opts: ['Le jeudi', 'Le vendredi', 'Le lundi', 'Je ne sais pas'],
+    opts: ['Le jeudi.', 'Le vendredi.', 'Le lundi.', 'Je ne sais pas.'],
     correct: 1
   },
   {
     source: 'Julie est arrivée à la gare à 8 h 05. Son train partait à 8 h 00.',
     q: 'On peut en déduire que Julie :',
-    opts: ['A probablement raté son train', 'Est montée dans son train', 'Est arrivée en avance', 'Je ne sais pas'],
+    opts: ['A probablement raté son train.', 'Est montée dans son train.', 'Est arrivée en avance.', 'Je ne sais pas.'],
     correct: 0
   },
   {
     source: "Depuis plusieurs mois, l'entreprise investit dans de nouveaux outils numériques, afin de faciliter le travail à distance et d'améliorer la collaboration entre équipes.",
     q: "L'idée principale est :",
-    opts: ["L'entreprise déménage", "L'entreprise modernise ses méthodes de travail", 'Les outils numériques coûtent cher', 'Je ne sais pas'],
+    opts: ["L'entreprise déménage.", "L'entreprise modernise ses méthodes de travail.", 'Les outils numériques coûtent cher.', 'Je ne sais pas.'],
     correct: 1
   },
   {
     source: "Le candidat n'a pas répondu à toutes les questions.",
     q: 'Quelle phrase exprime la même idée ?',
-    opts: ['Le candidat a répondu à certaines questions seulement', "Le candidat n'a répondu à aucune question", 'Le candidat a répondu à toutes les questions', 'Je ne sais pas'],
+    opts: ['Le candidat a répondu à certaines questions seulement.', "Le candidat n'a répondu à aucune question.", 'Le candidat a répondu à toutes les questions.', 'Je ne sais pas.'],
     correct: 0
   },
-   {
+  {
     source: 'Sophie travaille à temps partiel depuis janvier, mais elle est présente au bureau tous les matins.',
     q: 'Quelle affirmation est fausse ?',
-    opts: ['Sophie travaille depuis janvier', 'Sophie est présente chaque matin', 'Sophie travaille à temps plein', 'Je ne sais pas'],
+    opts: ['Sophie travaille depuis janvier.', 'Sophie est présente chaque matin.', 'Sophie travaille à temps plein.', 'Je ne sais pas.'],
     correct: 2
   },
   {
     source: 'Karim a envoyé son dossier lundi. Il a reçu une réponse mercredi puis signé son contrat vendredi.',
     q: "Que s'est-il passé en deuxième ?",
-    opts: ["L'envoi du dossier", 'La signature du contrat', 'La réception de la réponse', 'Je ne sais pas'],
+    opts: ["L'envoi du dossier.", 'La signature du contrat.', 'La réception de la réponse.', 'Je ne sais pas.'],
     correct: 2
   },
-
   {
     source: "L'accès à la plateforme est réservé aux utilisateurs ayant créé un compte avant le 1er mars.",
     q: 'Qui peut accéder à la plateforme ?',
-    opts: ['Tous les utilisateurs', 'Uniquement les utilisateurs inscrits avant le 1er mars', 'Les utilisateurs inscrits après le 1er mars', 'Je ne sais pas'],
+    opts: ['Tous les utilisateurs.', 'Uniquement les utilisateurs inscrits avant le 1er mars.', 'Les utilisateurs inscrits après le 1er mars.', 'Je ne sais pas.'],
     correct: 1
   },
   {
     source: "En raison d'un incident technique, la visioconférence a commencé avec vingt minutes de retard.",
     q: 'Pourquoi la visioconférence a-t-elle commencé en retard ?',
-    opts: ['Les participants sont arrivés trop tôt', 'Il y avait un problème technique', 'La réunion a été annulée', 'Je ne sais pas'],
+    opts: ['Les participants sont arrivés trop tôt.', 'Il y avait un problème technique.', 'La réunion a été annulée.', 'Je ne sais pas.'],
     correct: 1
   },
 ];
+
 
 // ============ BLOC 7 — Déclaratives (15s) ============
 // Options : ['Plutôt oui', 'Plutôt non']

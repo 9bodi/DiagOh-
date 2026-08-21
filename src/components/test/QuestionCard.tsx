@@ -39,7 +39,8 @@ export default function QuestionCard({
   <div className="mb-5 pb-5 border-b border-ohe-line-soft">
     <p className="font-serif text-[22px] sm:text-[28px] text-ohe-ink leading-[1.2] tracking-[-0.01em]">
 
-            « {questionText} »
+                        {questionText}
+
           </p>
         </div>
       )}

@@ -33,10 +33,12 @@ export default function BlockInterstitial({
       {/* Body */}
       <div className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center px-6 py-6 sm:px-10 sm:py-8 lg:px-14">
         <div className="w-full max-w-[720px]">
+          {/* Eyebrow */}
           {config.eyebrow && (
-            <Eyebrow tone="accent">{config.eyebrow.replace(/^✱\s*/, '')}</Eyebrow>
+            <Eyebrow tone="accent">{config.eyebrow}</Eyebrow>
           )}
 
+          {/* Titre */}
           <h1 className="mt-3 text-[30px] sm:text-[38px] lg:text-[46px] leading-[1.05] tracking-[-0.028em] font-normal text-balance">
             {config.title.split(' ').slice(0, -1).join(' ')}{' '}
             <span className="font-serif italic text-ohe-accent">
@@ -44,7 +46,15 @@ export default function BlockInterstitial({
             </span>
           </h1>
 
-                    <div className="mt-4 space-y-2.5 max-w-[600px]">
+          {/* Sous-titre (ex: "L'exercice change.") */}
+          {config.subtitle && (
+            <p className="mt-3 font-serif italic text-[16px] lg:text-[18px] text-ohe-muted leading-[1.4]">
+              {config.subtitle}
+            </p>
+          )}
+
+          {/* Corps */}
+          <div className="mt-4 space-y-2.5 max-w-[600px]">
             {config.body.map((paragraph, i) => (
               <p
                 key={i}
@@ -55,8 +65,7 @@ export default function BlockInterstitial({
             ))}
           </div>
 
-
-
+          {/* Exemple */}
           {config.example && (
             <div className="mt-5 p-4 sm:p-5 bg-ohe-panel-tint border border-ohe-line rounded-2xl">
               <div className="ohe-caption text-ohe-muted mb-3">
@@ -88,6 +97,14 @@ export default function BlockInterstitial({
             </div>
           )}
 
+          {/* Footnote (petit texte sous l'encadré exemple) */}
+          {config.footnote && (
+            <p className="mt-3 text-[11px] text-ohe-muted/80 leading-[1.5] italic">
+              * {config.footnote}
+            </p>
+          )}
+
+          {/* CTA */}
           <div className="mt-6">
             <PrimaryButton onClick={onContinue}>
               {config.ctaLabel ?? 'Continuer'}

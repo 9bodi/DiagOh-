@@ -15,33 +15,52 @@ const LEVEL_META: Record<string, { name: string; bar: string; badge: string; dot
 };
 
 // Libellés Roxane pour les quadrants (au lieu des anciens "À former en priorité", etc.)
-const QUADRANT_META: Record<number, { label: string }> = {
-  1: { label: 'Besoin perçu · Disposé' },
-  2: { label: 'Besoin perçu · Moins disposé' },
-  3: { label: 'Pas de besoin perçu · Disposé' },
-  4: { label: 'Pas de besoin perçu · Moins disposé' },
+const QUADRANT_META: Record<number, { label: string; tone: string }> = {
+  1: {
+    label: 'Besoin perçu · Disposé',
+    tone: 'bg-sky-50 border-sky-200 text-sky-900',
+  },
+  2: {
+    label: 'Besoin perçu · Moins disposé',
+    tone: 'bg-sky-50 border-sky-200 text-sky-900',
+  },
+  3: {
+    label: 'Pas de besoin perçu · Disposé',
+    tone: 'bg-sky-50 border-sky-200 text-sky-900',
+  },
+  4: {
+    label: 'Pas de besoin perçu · Moins disposé',
+    tone: 'bg-neutral-100 border-neutral-200 text-neutral-600',
+  },
 };
+
+
 
 
 // Métadonnées des 4 catégories de préconisation Roxane
-const RECOMMANDATION_META: Record<Recommandation, { desc: string; tone: string }> = {
+const RECOMMANDATION_META: Record<Recommandation, { label: string; tone: string; desc: string }> = {
   A_FORMER: {
-    desc: 'Public prioritaire pour une formation classique.',
-    tone: 'bg-emerald-50 border-emerald-100 text-emerald-900',
+    label: 'À former',
+    tone: 'bg-sky-50 border-sky-200 text-sky-900',
+    desc: 'Public prioritaire',
   },
   A_FORMER_ET_ACCOMPAGNER: {
-    desc: 'Formation à envisager avec un accompagnement pour lever les freins.',
-    tone: 'bg-ohe-blue/[0.05] border-ohe-blue/15 text-ohe-blue',
+    label: 'À former et accompagner',
+    tone: 'bg-sky-50 border-sky-200 text-sky-900',
+    desc: 'Nécessite un accompagnement',
   },
   A_FORMER_SOUS_RESERVES: {
-    desc: 'Formation possible mais à valider selon le contexte et le besoin réel.',
-    tone: 'bg-ohe-orange/[0.06] border-ohe-orange/20 text-ohe-orange',
+    label: 'À former sous réserves',
+    tone: 'bg-sky-50 border-sky-200 text-sky-900',
+    desc: 'À évaluer au cas par cas',
   },
   A_ORIENTER: {
-    desc: 'À orienter vers une autre solution qu\'une formation en orthographe.',
-    tone: 'bg-ohe-slate-50 border-ohe-slate-200 text-ohe-slate-700',
+    label: 'À orienter',
+    tone: 'bg-neutral-100 border-neutral-200 text-neutral-600',
+    desc: 'Vers une autre solution',
   },
 };
+
 
 const BLOCKS = [
   { num: 1, label: 'Singulier / Pluriel' },
@@ -331,16 +350,12 @@ export default async function ResultsPage() {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[1, 2, 3, 4].map(q => {
-                  const info = QUADRANT_META[q];
-                  const count = quadrantCounts[q];
-                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-                  const tone =
-                    q === 1 ? 'bg-emerald-50 border-emerald-100 text-emerald-900'
-                    : q === 2 ? 'bg-ohe-orange/[0.06] border-ohe-orange/20 text-ohe-orange'
-                    : q === 3 ? 'bg-ohe-blue/[0.05] border-ohe-blue/15 text-ohe-blue'
-                    : 'bg-ohe-slate-50 border-ohe-slate-200 text-ohe-slate-700';
-                  return (
-                                        <div key={q} className={`p-5 rounded-2xl border ${tone}`}>
+  const info = QUADRANT_META[q];
+  const count = quadrantCounts[q];
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div key={q} className={`p-5 rounded-2xl border ${info.tone}`}>
+
                       <p className="font-serif text-xl tracking-tight mb-3 leading-snug">
                         {info.label}
                       </p>

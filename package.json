@@ -8,6 +8,10 @@
     "start": "next start",
     "postinstall": "prisma generate"
   },
+  "prisma": {
+  "seed": "tsx prisma/seed-questions.ts"
+}
+,
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "@react-pdf/renderer": "^4.5.1",

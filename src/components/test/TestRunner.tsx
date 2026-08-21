@@ -264,7 +264,7 @@ export default function TestRunner({ userName }: { userName: string }) {
 
       {/* Body */}
       <div className="flex-1 min-h-0 flex items-center justify-center px-6 sm:px-10 lg:px-14 py-4 sm:py-6 overflow-y-auto">
-        <div key={question.id} className="w-full max-w-3xl animate-question-fade">
+                   <div key={question.id} className="w-full max-w-3xl animate-question-fade">
           {question.blockNumber === 4 && (
             <div className="mb-4 flex items-center gap-2">
               <span className="w-1 h-4 bg-ohe-accent" />
@@ -272,6 +272,13 @@ export default function TestRunner({ userName }: { userName: string }) {
                 Ces mots n&apos;existent pas — c&apos;est normal.
               </p>
             </div>
+          )}
+
+          {/* Consigne bloc 6 : petite et grise, tout en haut */}
+          {question.blockNumber === 6 && question.instruction && (
+            <p className="mb-4 text-[13px] text-ohe-muted leading-relaxed">
+              {question.instruction}
+            </p>
           )}
 
           {question.sourceText && (
@@ -286,7 +293,7 @@ export default function TestRunner({ userName }: { userName: string }) {
           <div className="mt-5">
             <QuestionCard
               subCategory={null}
-              instruction={question.instruction}
+              instruction={question.blockNumber === 6 ? null : question.instruction}
               questionText={question.text}
               options={question.options}
               selectedIndex={selectedIndex}
@@ -295,6 +302,8 @@ export default function TestRunner({ userName }: { userName: string }) {
             />
           </div>
         </div>
+
+
       </div>
 
       {/* Footer */}
