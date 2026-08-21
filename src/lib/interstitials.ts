@@ -32,49 +32,46 @@ export const INTERSTITIALS: Record<number, InterstitialConfig | null> = {
   3: null,
 
   4: {
-    eyebrow: '✱ Nouvelle section',
     title: 'Orthographe lexicale',
     body: [
       "Les mots que vous allez voir n'existent pas dans le dictionnaire français. Ils sont inventés pour ce diagnostic.",
-      "Votre tâche : identifier, parmi les propositions, celle dont l'écriture respecte les règles de l'orthographe française (accents, doubles consonnes, terminaisons plausibles).",
+      "Aucun de ces mots n'existe. Sinon, quelle serait son orthographe, d'après toi ?",
       "Prenez votre temps pour lire — chaque question est chronométrée séparément.",
     ],
     example: {
       label: 'Exemple',
       items: [
-        { text: 'lettri', highlight: 'correct', caption: 'écriture plausible en français' },
-        { text: 'llitri', highlight: 'wrong', caption: 'double « ll » en début de mot : impossible' },
-        { text: 'litrii', highlight: 'wrong', caption: 'double « i » final : impossible' },
+        { text: 'lettri.', highlight: 'correct', caption: 'écriture plausible en français' },
+        { text: 'llitri.', highlight: 'wrong', caption: 'double « ll » en début de mot : impossible' },
+        { text: 'litrii.', highlight: 'wrong', caption: 'double « i » final : impossible' },
       ],
     },
     ctaLabel: 'Je suis prêt(e), continuer',
   },
 
   5: {
-    eyebrow: '✱ Nouvelle section',
     title: 'Syntaxe',
     body: [
       "Les phrases que vous allez voir portent sur l'ordre des mots et la construction grammaticale.",
-      "Votre tâche : identifier, parmi les propositions, celle dont la construction respecte les règles de la syntaxe française (accords, ponctuation, structure).",
+      'Quelle phrase est correctement construite ?',
       "Prenez votre temps pour lire — chaque question est chronométrée séparément.",
     ],
     example: {
       label: 'Exemple',
       items: [
         { text: "L'homme à qui je pense est parti.", highlight: 'correct', caption: 'construction correcte' },
-        { text: "L'homme que je pense est parti.", highlight: 'wrong', caption: 'pronom relatif incorrect' },
-        { text: "L'homme dont je pense est parti.", highlight: 'wrong', caption: 'pronom relatif inadapté' },
+        { text: "L'homme que je pense est parti.", highlight: 'wrong', caption: 'construction incorrecte' },
+        { text: "L'homme dont je pense est parti.", highlight: 'wrong', caption: 'construction incorrecte' },
       ],
     },
     ctaLabel: 'Je suis prêt(e), continuer',
   },
 
   6: {
-    eyebrow: '✱ Nouvelle section',
     title: 'Compréhension écrite',
     body: [
       "Les textes que vous allez lire sont extraits de situations professionnelles courantes.",
-      "Votre tâche : identifier, parmi les propositions, celle qui correspond au sens du texte (information explicite, sens implicite ou reformulation).",
+      'Lis le texte, puis réponds à la question.',
       "Prenez votre temps pour lire le texte et la question — chaque question est chronométrée séparément.",
     ],
     example: {
@@ -89,11 +86,10 @@ export const INTERSTITIALS: Record<number, InterstitialConfig | null> = {
   },
 
   7: {
-    eyebrow: '✱ Dernière section',
     title: 'Questionnaire personnel',
     body: [
       "Cette dernière section n'évalue plus vos connaissances mais votre rapport à l'écrit.",
-      "Votre tâche : répondre spontanément, selon ce qui vous correspond le mieux. Il n'y a ni bonne ni mauvaise réponse.",
+      "Il n'y a ni bonne ni mauvaise réponse. Répondez spontanément, selon ce qui vous correspond le mieux.",
       "Prenez votre temps pour lire — chaque question est chronométrée séparément.",
     ],
     ctaLabel: 'Je suis prêt(e), continuer',

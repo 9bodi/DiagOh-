@@ -44,20 +44,17 @@ export default function BlockInterstitial({
             </span>
           </h1>
 
-          <div className="mt-4 space-y-2.5 max-w-[600px]">
-  {config.body.map((paragraph, i) => (
-    <p
-      key={i}
-      className={
-        i === 0
-          ? "font-serif italic text-[17px] lg:text-[19px] text-ohe-accent leading-[1.4] text-pretty"
-          : "text-[14px] lg:text-[15px] text-ohe-muted leading-[1.5] text-pretty"
-      }
-    >
-      {paragraph}
-    </p>
-  ))}
-</div>
+                    <div className="mt-4 space-y-2.5 max-w-[600px]">
+            {config.body.map((paragraph, i) => (
+              <p
+                key={i}
+                className="text-[14px] lg:text-[15px] text-ohe-muted leading-[1.5] text-pretty"
+              >
+                {paragraph}
+              </p>
+            ))}
+          </div>
+
 
 
           {config.example && (

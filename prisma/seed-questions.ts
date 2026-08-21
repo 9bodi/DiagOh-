@@ -6,14 +6,16 @@ const prisma = new PrismaClient();
 // instruction = consigne par défaut affichée au-dessus de la question
 // subCategory = étiquette orange affichée tout en haut
 const META = {
-  bloc1: { subCategory: 'Orthographe grammaticale', instruction: 'Choisissez la bonne orthographe.' },
-  bloc2: { subCategory: 'Conjugaison',              instruction: 'Choisissez la forme verbale correcte.' },
-  bloc3: { subCategory: 'Participe passé',          instruction: 'Choisissez le participe passé correctement accordé.' },
-  bloc4: { subCategory: 'Orthographe lexicale',     instruction: 'Parmi ces mots inventés, quelle écriture vous semble correcte ?' },
+  bloc1: { subCategory: 'Orthographe grammaticale', instruction: 'Quelle orthographe vous semble correcte ?' },
+  bloc2: { subCategory: 'Conjugaison',              instruction: 'Quelle orthographe vous semble correcte ?' },
+  bloc3: { subCategory: 'Participe passé',          instruction: 'Quelle orthographe vous semble correcte ?' },
+  bloc4: { subCategory: 'Orthographe lexicale',     instruction: "Aucun de ces mots n'existe. Sinon, quelle serait son orthographe, d'après toi ?" },
   bloc5: { subCategory: 'Syntaxe',                  instruction: 'Quelle phrase est correctement construite ?' },
-  bloc6: { subCategory: 'Compréhension',            instruction: 'Lisez le texte ci-dessus, puis répondez à la question.' },
-  bloc7: { subCategory: 'Questionnaire',            instruction: 'Que pensez-vous de cette affirmation ?' },
+  bloc6: { subCategory: 'Compréhension',            instruction: 'Lis le texte, puis réponds à la question.' },
+  bloc7: { subCategory: 'Questionnaire',            instruction: '' },
 };
+
+
 
 // ============ BLOC 1 — Singulier/Pluriel (10s) ============
 const bloc1 = [
@@ -144,18 +146,19 @@ const bloc6 = [
     opts: ['Le candidat a répondu à certaines questions seulement', "Le candidat n'a répondu à aucune question", 'Le candidat a répondu à toutes les questions', 'Je ne sais pas'],
     correct: 0
   },
-  {
-    source: 'Karim travaille à temps partiel depuis janvier, mais il est présent au bureau tous les matins.',
+   {
+    source: 'Sophie travaille à temps partiel depuis janvier, mais elle est présente au bureau tous les matins.',
     q: 'Quelle affirmation est fausse ?',
-    opts: ['Karim travaille depuis janvier', 'Karim est présent chaque matin', 'Karim travaille à temps plein', 'Je ne sais pas'],
+    opts: ['Sophie travaille depuis janvier', 'Sophie est présente chaque matin', 'Sophie travaille à temps plein', 'Je ne sais pas'],
     correct: 2
   },
   {
-    source: 'Sophie a envoyé son dossier lundi. Elle a reçu une réponse mercredi puis signé son contrat vendredi.',
+    source: 'Karim a envoyé son dossier lundi. Il a reçu une réponse mercredi puis signé son contrat vendredi.',
     q: "Que s'est-il passé en deuxième ?",
     opts: ["L'envoi du dossier", 'La signature du contrat', 'La réception de la réponse', 'Je ne sais pas'],
     correct: 2
   },
+
   {
     source: "L'accès à la plateforme est réservé aux utilisateurs ayant créé un compte avant le 1er mars.",
     q: 'Qui peut accéder à la plateforme ?',
@@ -174,17 +177,20 @@ const bloc6 = [
 // Options : ['Plutôt oui', 'Plutôt non']
 // positiveAnswer = index de la réponse considérée comme positive (adapté / intéressé)
 const bloc7 = [
-  { q: "Le français est-il votre première langue ou une langue que vous maitrisez bien à l'oral ?", axis: 'ADAPTATION' as const, positiveAnswer: 0 },
-  { q: 'Avez-vous des problèmes de lecture ?', axis: 'ADAPTATION' as const, positiveAnswer: 1 },
+  // ===== 5 questions ADAPTATION (= "Besoin perçu" côté Roxane) =====
+  { q: "Le français est-il une langue que vous maitrisez à l'oral ?", axis: 'ADAPTATION' as const, positiveAnswer: 1 },
+  { q: 'Savez-vous lire en français ?', axis: 'ADAPTATION' as const, positiveAnswer: 1 },
   { q: 'Diriez-vous que vous avez des difficultés en orthographe ?', axis: 'ADAPTATION' as const, positiveAnswer: 0 },
-  { q: 'Êtes-vous satisfait(e) de votre niveau en orthographe ?', axis: 'INTEREST' as const, positiveAnswer: 1 },
+  { q: 'Êtes-vous satisfait(e) de votre niveau en orthographe ?', axis: 'ADAPTATION' as const, positiveAnswer: 1 },
   { q: 'Vous a-t-on déjà fait des remarques négatives sur votre orthographe ?', axis: 'ADAPTATION' as const, positiveAnswer: 0 },
-  { q: "Êtes-vous à l'aise avec l'accord des verbes ?", axis: 'ADAPTATION' as const, positiveAnswer: 1 },
+  // ===== 5 questions INTEREST (= "Disposition à se former" côté Roxane) =====
+  { q: "Êtes-vous à l'aise avec l'accord des verbes ?", axis: 'INTEREST' as const, positiveAnswer: 1 },
   { q: "La maîtrise de l'orthographe vous est-elle utile ?", axis: 'INTEREST' as const, positiveAnswer: 0 },
   { q: 'Seriez-vous prêt(e) à consacrer quelques minutes par jour pour améliorer votre orthographe ?', axis: 'INTEREST' as const, positiveAnswer: 0 },
   { q: 'Si une formation vous aidait à progresser, souhaiteriez-vous commencer dans les prochains mois ?', axis: 'INTEREST' as const, positiveAnswer: 0 },
   { q: 'Si vous suiviez une formation, souhaiteriez-vous revoir les verbes ?', axis: 'INTEREST' as const, positiveAnswer: 0 },
 ];
+
 
 async function main() {
   console.log('🗑️  Suppression des anciennes questions...');

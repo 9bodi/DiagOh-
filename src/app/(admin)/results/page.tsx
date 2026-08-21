@@ -3,20 +3,44 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { getAccessibleGroupIds } from '@/lib/permissions';
+import { RECOMMANDATION_LABELS } from '@/lib/scoring';
+import type { Recommandation } from '@prisma/client';
 
 // ============ Métadonnées ============
-const LEVEL_META: Record<string, { name: string; bar: string; badge: string }> = {
-  A:  { name: 'Niveau A · Élémentaire',   bar: 'bg-red-400',     badge: 'bg-red-50 text-red-700' },
-  B1: { name: 'Niveau B1 · Intermédiaire', bar: 'bg-ohe-orange',  badge: 'bg-ohe-orange/10 text-ohe-orange' },
-  B2: { name: 'Niveau B2 · Avancé',        bar: 'bg-ohe-blue',    badge: 'bg-ohe-blue/10 text-ohe-blue' },
-  C:  { name: 'Niveau C · Expert',         bar: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700' },
+const LEVEL_META: Record<string, { name: string; bar: string; badge: string; dot: string; desc: string }> = {
+  A:  { name: 'Niveau A · Élémentaire',   bar: 'bg-red-400',     badge: 'bg-red-50 text-red-700',                    dot: 'bg-red-400',     desc: 'besoins de base' },
+  B1: { name: 'Niveau B1 · Intermédiaire', bar: 'bg-ohe-orange',  badge: 'bg-ohe-orange/10 text-ohe-orange',          dot: 'bg-ohe-orange',  desc: 'besoins techniques' },
+  B2: { name: 'Niveau B2 · Avancé',        bar: 'bg-ohe-blue',    badge: 'bg-ohe-blue/10 text-ohe-blue',              dot: 'bg-ohe-blue',    desc: 'besoins professionnels' },
+  C:  { name: 'Niveau C · Expert',         bar: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700',            dot: 'bg-emerald-500', desc: 'besoins experts' },
 };
 
-const QUADRANT_META: Record<number, { label: string; desc: string }> = {
-  1: { label: 'À former en priorité',     desc: 'Adapté · Intéressé' },
-  2: { label: 'À sensibiliser',           desc: 'Adapté · Non intéressé' },
-  3: { label: 'À engager si besoin',      desc: 'Non adapté · Intéressé' },
-  4: { label: 'Pas prioritaire',          desc: 'Non adapté · Non intéressé' },
+// Libellés Roxane pour les quadrants (au lieu des anciens "À former en priorité", etc.)
+const QUADRANT_META: Record<number, { label: string }> = {
+  1: { label: 'Besoin perçu · Disposé' },
+  2: { label: 'Besoin perçu · Moins disposé' },
+  3: { label: 'Pas de besoin perçu · Disposé' },
+  4: { label: 'Pas de besoin perçu · Moins disposé' },
+};
+
+
+// Métadonnées des 4 catégories de préconisation Roxane
+const RECOMMANDATION_META: Record<Recommandation, { desc: string; tone: string }> = {
+  A_FORMER: {
+    desc: 'Public prioritaire pour une formation classique.',
+    tone: 'bg-emerald-50 border-emerald-100 text-emerald-900',
+  },
+  A_FORMER_ET_ACCOMPAGNER: {
+    desc: 'Formation à envisager avec un accompagnement pour lever les freins.',
+    tone: 'bg-ohe-blue/[0.05] border-ohe-blue/15 text-ohe-blue',
+  },
+  A_FORMER_SOUS_RESERVES: {
+    desc: 'Formation possible mais à valider selon le contexte et le besoin réel.',
+    tone: 'bg-ohe-orange/[0.06] border-ohe-orange/20 text-ohe-orange',
+  },
+  A_ORIENTER: {
+    desc: 'À orienter vers une autre solution qu\'une formation en orthographe.',
+    tone: 'bg-ohe-slate-50 border-ohe-slate-200 text-ohe-slate-700',
+  },
 };
 
 const BLOCKS = [
@@ -84,9 +108,10 @@ export default async function ResultsPage() {
   const levelCounts = { A: 0, B1: 0, B2: 0, C: 0 } as Record<string, number>;
   completedSessions.forEach(s => { if (s.level) levelCounts[s.level]++; });
 
-  // ===== Score moyen procédural (/6) =====
+  // ===== Score moyen procédural (converti en %) =====
   const totalScore = completedSessions.reduce((sum, s) => sum + (s.scoreProcedural ?? 0), 0);
   const avgScore = total > 0 ? totalScore / total : 0;
+  const avgScorePct = (avgScore * 100) / 6;
 
   // ===== Quadrants =====
   const quadrantCounts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
@@ -102,19 +127,28 @@ export default async function ResultsPage() {
     return { ...b, avg };
   });
 
+  // ===== Répartition des préconisations =====
+  const recommandationCounts: Record<Recommandation, number> = {
+    A_FORMER: 0,
+    A_FORMER_ET_ACCOMPAGNER: 0,
+    A_FORMER_SOUS_RESERVES: 0,
+    A_ORIENTER: 0,
+  };
+  completedSessions.forEach(s => {
+    if (s.recommandation) recommandationCounts[s.recommandation]++;
+  });
+
   const dominantLevel = Object.entries(levelCounts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? '—';
 
   return (
     <main className="min-h-screen bg-ohe-slate-50">
-     <AdminHeader
-  userName={session.user.name ?? session.user.email}
-  orgName={org.name}
-  currentPath="/results"
-  userRole={session.user.role}
-  isImpersonating={session.user.isImpersonating}
-/>
-
-
+      <AdminHeader
+        userName={session.user.name ?? session.user.email}
+        orgName={org.name}
+        currentPath="/results"
+        userRole={session.user.role}
+        isImpersonating={session.user.isImpersonating}
+      />
 
       <div className="max-w-6xl mx-auto px-6 py-10">
         {/* Hero */}
@@ -156,8 +190,8 @@ export default async function ResultsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <KpiCard
                 label="Score moyen"
-                value={avgScore.toFixed(2).replace('.', ',')}
-                suffix="/ 6"
+                value={avgScorePct.toFixed(1).replace('.', ',')}
+                suffix="%"
                 hint="sur l'ensemble des diagnostics"
                 accent="blue"
               />
@@ -175,44 +209,72 @@ export default async function ResultsPage() {
               />
             </div>
 
-            {/* Répartition CECRL */}
+            {/* Niveau de maîtrise global */}
             <Section
-              kicker="✱ Niveau global"
-              title={<>Répartition <em className="italic text-ohe-blue">CECRL.</em></>}
+              title={<>Niveau de maîtrise <em className="italic text-ohe-blue">global.</em></>}
             >
-              <div className="space-y-3.5">
+              <p className="text-sm text-ohe-slate-600 leading-relaxed mb-4">
+                Le test évalue les compétences des participants à partir de 58 questions et permet de les situer sur les niveaux de référence retenus pour le diagnostic&nbsp;:
+              </p>
+              <ul className="space-y-1.5 mb-6 text-sm text-ohe-slate-700">
+                {(['A', 'B1', 'B2', 'C'] as const).map(level => {
+                  const info = LEVEL_META[level];
+                  return (
+                    <li key={level} className="flex items-center gap-2.5">
+                      <span className={`w-2 h-2 rounded-full ${info.dot}`} />
+                      <span><strong className="font-medium">{info.name}</strong> : {info.desc}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+
+                           {/* Histogramme vertical */}
+              <div className="flex items-end justify-around gap-4 h-56 px-4 pt-6 pb-2 border-b border-ohe-slate-200">
                 {(['A', 'B1', 'B2', 'C'] as const).map(level => {
                   const info = LEVEL_META[level];
                   const count = levelCounts[level];
                   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
                   return (
-                    <div key={level}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2.5">
-                          <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-bold ${info.badge}`}>
-                            {level}
-                          </span>
-                          <span className="text-sm text-ohe-slate-700">{info.name}</span>
-                        </div>
-                        <span className="font-mono text-xs text-ohe-slate-600">
-                          {count} · {pct}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-ohe-slate-100 rounded-full h-1.5 overflow-hidden">
+                    <div key={level} className="flex-1 flex flex-col items-center gap-2 h-full">
+                      {/* % au-dessus */}
+                      <span className="font-mono text-xs font-semibold text-ohe-slate-700">
+                        {pct}%
+                      </span>
+
+                      {/* Barre verticale */}
+                      <div className="flex-1 w-full max-w-[64px] flex items-end">
                         <div
-                          className={`h-full rounded-full ${info.bar} transition-all duration-500`}
-                          style={{ width: `${pct}%` }}
+                          className={`w-full rounded-t-md ${info.bar} transition-all duration-500`}
+                          style={{ height: `${pct}%`, minHeight: pct > 0 ? '4px' : '0' }}
                         />
                       </div>
                     </div>
                   );
                 })}
               </div>
+
+              {/* Labels + counts sous les barres */}
+              <div className="flex items-start justify-around gap-4 px-4 pt-3">
+                {(['A', 'B1', 'B2', 'C'] as const).map(level => {
+                  const info = LEVEL_META[level];
+                  const count = levelCounts[level];
+                  return (
+                    <div key={level} className="flex-1 flex flex-col items-center gap-1 text-center">
+                      <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-bold ${info.badge}`}>
+                        {level}
+                      </span>
+                      <span className="text-[11px] text-ohe-slate-600 leading-tight">
+                        {count}&nbsp;pers.
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
             </Section>
 
-            {/* Moyenne par bloc */}
+            {/* Maîtrise moyenne par bloc */}
             <Section
-              kicker="✱ Compétences"
               title={<>Maîtrise moyenne <em className="italic text-ohe-blue">par bloc.</em></>}
               subtitle="Repérez les blocs à renforcer collectivement."
             >
@@ -243,8 +305,8 @@ export default async function ResultsPage() {
                           <span className={`font-mono text-[11px] ${qualClass}`}>
                             {meta.label}
                           </span>
-                          <span className="font-mono text-xs font-semibold text-ohe-slate-900 w-12 text-right">
-                            {b.avg.toFixed(2).replace('.', ',')} / 1
+                          <span className="font-mono text-xs font-semibold text-ohe-slate-900 w-14 text-right">
+                            {pct}&nbsp;%
                           </span>
                         </div>
                       </div>
@@ -260,12 +322,13 @@ export default async function ResultsPage() {
               </div>
             </Section>
 
-            {/* Matrice 2x2 — Quadrants */}
+            {/* Déclarations du participant (matrice 2x2) */}
             <Section
-              kicker="✱ Profil déclaratif"
-              title={<>Matrice <em className="italic text-ohe-blue">intérêt / pertinence.</em></>}
-              subtitle="Basée sur les réponses déclaratives. Utile pour cibler vos actions de formation."
+              title={<>Déclarations <em className="italic text-ohe-blue">du participant.</em></>}
             >
+              <p className="text-sm text-ohe-slate-600 leading-relaxed mb-6">
+                Cette partie présente les réponses des participants sur leur besoin perçu et leur disposition à suivre une formation.
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[1, 2, 3, 4].map(q => {
                   const info = QUADRANT_META[q];
@@ -273,23 +336,53 @@ export default async function ResultsPage() {
                   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
                   const tone =
                     q === 1 ? 'bg-emerald-50 border-emerald-100 text-emerald-900'
-                    : q === 2 ? 'bg-ohe-blue/[0.05] border-ohe-blue/15 text-ohe-blue'
-                    : q === 3 ? 'bg-ohe-orange/[0.06] border-ohe-orange/20 text-ohe-orange'
+                    : q === 2 ? 'bg-ohe-orange/[0.06] border-ohe-orange/20 text-ohe-orange'
+                    : q === 3 ? 'bg-ohe-blue/[0.05] border-ohe-blue/15 text-ohe-blue'
                     : 'bg-ohe-slate-50 border-ohe-slate-200 text-ohe-slate-700';
                   return (
-                    <div key={q} className={`p-5 rounded-2xl border ${tone}`}>
-                      <p className="font-mono text-[10px] tracking-[0.14em] uppercase opacity-80 mb-2">
-                        {info.desc}
-                      </p>
+                                        <div key={q} className={`p-5 rounded-2xl border ${tone}`}>
                       <p className="font-serif text-xl tracking-tight mb-3 leading-snug">
                         {info.label}
                       </p>
                       <div className="flex items-baseline gap-2">
                         <span className="font-serif text-3xl">{pct}%</span>
                         <span className="text-xs opacity-70">
-                          ({count} {count > 1 ? 'pers.' : 'pers.'})
+                          ({count}&nbsp;{count > 1 ? 'pers.' : 'pers.'})
                         </span>
                       </div>
+                    </div>
+
+                  );
+                })}
+              </div>
+            </Section>
+
+            {/* Préconisation */}
+            <Section
+              title={<>Précon<em className="italic text-ohe-blue">isation.</em></>}
+            >
+              <p className="text-sm text-ohe-slate-600 leading-relaxed mb-6">
+                Cette préconisation croise les résultats du test et les déclarations du participant, afin de déterminer la suite la plus adaptée.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {(Object.keys(RECOMMANDATION_META) as Recommandation[]).map(key => {
+                  const info = RECOMMANDATION_META[key];
+                  const count = recommandationCounts[key];
+                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                  return (
+                    <div key={key} className={`p-5 rounded-2xl border ${info.tone}`}>
+                      <p className="font-serif text-lg tracking-tight mb-2 leading-snug">
+                        {RECOMMANDATION_LABELS[key]}
+                      </p>
+                      <div className="flex items-baseline gap-2 mb-3">
+                        <span className="font-serif text-3xl">{pct}%</span>
+                        <span className="text-xs opacity-70">
+                          ({count}&nbsp;{count > 1 ? 'pers.' : 'pers.'})
+                        </span>
+                      </div>
+                      <p className="text-xs opacity-80 leading-relaxed">
+                        {info.desc}
+                      </p>
                     </div>
                   );
                 })}
@@ -331,16 +424,18 @@ function KpiCard({ label, value, suffix, hint, accent }: {
 }
 
 function Section({ kicker, title, subtitle, children }: {
-  kicker: string;
+  kicker?: string;
   title: React.ReactNode;
   subtitle?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="bg-white rounded-2xl border border-ohe-slate-200/60 p-8 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_20px_40px_-20px_rgba(15,23,42,0.12)]">
-      <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
-        {kicker}
-      </p>
+      {kicker && (
+        <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
+          {kicker}
+        </p>
+      )}
       <h2 className="font-serif text-2xl lg:text-[28px] tracking-tight leading-tight text-ohe-slate-900 mb-1">
         {title}
       </h2>

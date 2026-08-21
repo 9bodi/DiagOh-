@@ -1,5 +1,6 @@
 import { prisma } from './prisma';
-import { Level } from '@prisma/client';
+import { Level, Recommandation } from '@prisma/client';
+
 
 /**
  * Convertit un nombre de bonnes réponses (sur 8) en points selon le barème CDC v3 :
@@ -54,6 +55,66 @@ function computeQuadrant(scoreAdaptation: number, scoreInteret: number): number 
  *   - Score Adaptation (/5) + Score Intérêt (/5) pour le bloc 7
  *   - Quadrant (1 à 4)
  */
+/**
+ * Type des 4 catégories de préconisation finales (règles Roxane).
+ */
+
+/**
+ * Libellés d'affichage des préconisations.
+ */
+/**
+ * Libellés d'affichage des préconisations.
+ */
+export const RECOMMANDATION_LABELS: Record<Recommandation, string> = {
+  A_FORMER: 'À former',
+  A_FORMER_ET_ACCOMPAGNER: 'À former et accompagner',
+  A_FORMER_SOUS_RESERVES: 'À former sous réserves',
+  A_ORIENTER: 'À orienter',
+};
+
+/**
+ * Calcule la préconisation finale en croisant le niveau CECRL et le quadrant.
+ *
+ * Règles (Roxane) :
+ *  - B1/B2 + Besoin perçu + Disposé            → À former
+ *  - B1/B2 + Moins disposé (peu importe besoin) → À former et accompagner
+ *  - B1/B2 + Pas de besoin perçu + Disposé     → À former sous réserves
+ *  - A/C   + Besoin perçu (peu importe disp.)  → À former sous réserves
+ *  - A/C   + Moins disposé                     → À orienter
+ *  - A/C   + Pas de besoin perçu + Disposé     → À former sous réserves (par défaut)
+ *
+ * Quadrants :
+ *  Q1 = Besoin perçu + Disposé
+ *  Q2 = Besoin perçu + Moins disposé
+ *  Q3 = Pas de besoin perçu + Disposé
+ *  Q4 = Pas de besoin perçu + Moins disposé
+ */
+function computeRecommandation(level: Level, quadrant: number): Recommandation {
+  const isIntermediate = level === Level.B1 || level === Level.B2;
+  const isExtreme = level === Level.A || level === Level.C;
+
+  if (isIntermediate) {
+    switch (quadrant) {
+      case 1: return 'A_FORMER';
+      case 2: return 'A_FORMER_ET_ACCOMPAGNER';
+      case 3: return 'A_FORMER_SOUS_RESERVES';
+      case 4: return 'A_FORMER_ET_ACCOMPAGNER';
+    }
+  }
+
+  if (isExtreme) {
+    switch (quadrant) {
+      case 1: return 'A_FORMER_SOUS_RESERVES';
+      case 2: return 'A_ORIENTER';
+      case 3: return 'A_FORMER_SOUS_RESERVES';
+      case 4: return 'A_ORIENTER';
+    }
+  }
+
+  return 'A_FORMER_SOUS_RESERVES';
+}
+
+
 export async function computeAndSaveScores(sessionId: string) {
   const answers = await prisma.answer.findMany({
     where: { testSessionId: sessionId },
@@ -103,8 +164,30 @@ export async function computeAndSaveScores(sessionId: string) {
     else if (a.question.declarativeAxis === 'INTEREST') scoreInteret++;
   }
 
-  // Quadrant
+ // Quadrant
   const quadrant = computeQuadrant(scoreAdaptation, scoreInteret);
+
+  // Préconisation finale (niveau CECRL × quadrant)
+  const recommandation = computeRecommandation(level, quadrant);
+
+  // Sauvegarde en DB
+  await prisma.testSession.update({
+    where: { id: sessionId },
+    data: {
+      scoreBloc1,
+      scoreBloc2,
+      scoreBloc3,
+      scoreBloc4,
+      scoreBloc5,
+      scoreBloc6,
+      scoreProcedural,
+      level,
+      scoreAdaptation,
+      scoreInteret,
+      quadrant,
+      recommandation,
+    },
+  });
 
   return {
     scoreBloc1,
@@ -118,5 +201,6 @@ export async function computeAndSaveScores(sessionId: string) {
     scoreAdaptation,
     scoreInteret,
     quadrant,
+    recommandation,
   };
 }

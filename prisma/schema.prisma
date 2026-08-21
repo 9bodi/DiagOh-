@@ -54,6 +54,12 @@ enum DeclarativeAxis {
   ADAPTATION
   INTEREST
 }
+enum Recommandation {
+  A_FORMER
+  A_FORMER_ET_ACCOMPAGNER
+  A_FORMER_SOUS_RESERVES
+  A_ORIENTER
+}
 
 // ============ MODELS ============
 
@@ -150,6 +156,7 @@ model TestSession {
   scoreAdaptation             Int?
   scoreInteret                Int?
   quadrant                    Int?        // 1 à 4
+  recommandation              Recommandation?
 
   // Legacy (gardé pour compat ascendante, sera supprimé plus tard)
   scoreDeclaratif             Int?
