@@ -224,22 +224,23 @@ export default function UsersPageContent({
 
           <button
             type="button"
-            onClick={() => {
-              const testLabels: Record<string, string> = {
-                all: '', pending: 'En attente', ready: 'Démarré', in_progress: 'En cours',
-                completed: 'Terminé', expired: 'Hors délais',
-              };
-              const groupLabel = groupFilter === 'all'
-                ? ''
-                : groupFilter === 'none'
-                  ? 'Sans groupe'
-                  : groups.find((g) => g.id === groupFilter)?.name ?? '';
-              exportUsersToPdf(filteredUsers, orgName, {
-                status: testLabels[testFilter] || undefined,
-                group: groupLabel || undefined,
-                search: search || undefined,
-              });
-            }}
+            onClick={async () => {
+  const testLabels: Record<string, string> = {
+    all: '', pending: 'En attente', ready: 'Démarré', in_progress: 'En cours',
+    completed: 'Terminé', expired: 'Hors délais',
+  };
+  const groupLabel = groupFilter === 'all'
+    ? ''
+    : groupFilter === 'none'
+      ? 'Sans groupe'
+      : groups.find((g) => g.id === groupFilter)?.name ?? '';
+  await exportUsersToPdf(filteredUsers, orgName, {
+    status: testLabels[testFilter] || undefined,
+    group: groupLabel || undefined,
+    search: search || undefined,
+  });
+}}
+
             disabled={filteredUsers.length === 0}
             className="inline-flex items-center gap-2 px-3 py-1.5 border border-ohe-slate-200 rounded-lg bg-white text-sm font-medium text-ohe-slate-700 hover:border-ohe-slate-300 hover:bg-ohe-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Exporter la vue filtrée au format PDF"

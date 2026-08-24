@@ -6,7 +6,6 @@ import { Eyebrow } from '@/components/ui/Eyebrow';
 import { Badge } from '@/components/ui/Badge';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import ResultRadar from '@/components/result/ResultRadar';
-import QuadrantMatrix from '@/components/result/QuadrantMatrix';
 import BlockResultRow from '@/components/result/BlockResultRow';
 import LogoutButton from '@/components/LogoutButton';
 
@@ -88,20 +87,21 @@ export default async function ResultPage() {
             <p className="text-ohe-muted mt-2">{levelInfo.tagline}</p>
           </div>
           <div className="border border-ohe-line rounded-3xl p-10 bg-ohe-panel-tint flex flex-col justify-center">
-            <Eyebrow tone="muted">Score procédural</Eyebrow>
-            <div className="flex items-baseline gap-2 mt-4">
-              <span
-                className="text-6xl text-ohe-ink"
-                style={{ fontFamily: 'var(--font-instrument-serif)', fontStyle: 'italic' }}
-              >
-                {scoreTotal.toFixed(2).replace('.', ',')}
-              </span>
-              <span className="text-2xl text-ohe-muted">/ 6</span>
-            </div>
-            <p className="text-sm text-ohe-muted mt-4">
-              Somme des 6 blocs procéduraux (chaque bloc noté sur 1, correspondant à 8 questions).
-            </p>
-          </div>
+  <Eyebrow tone="muted">Score global</Eyebrow>
+  <div className="flex items-baseline gap-2 mt-4">
+    <span
+      className="text-6xl text-ohe-ink"
+      style={{ fontFamily: 'var(--font-instrument-serif)', fontStyle: 'italic' }}
+    >
+      {Math.round((scoreTotal / 6) * 100)}
+    </span>
+    <span className="text-2xl text-ohe-muted">%</span>
+  </div>
+  <p className="text-sm text-ohe-muted mt-4">
+    Pourcentage global de bonnes réponses sur les 48 questions procédurales du diagnostic.
+  </p>
+</div>
+
         </section>
 
         {/* Radar */}
@@ -111,7 +111,7 @@ export default async function ResultPage() {
             className="text-4xl text-ohe-ink mt-3 mb-10"
             style={{ fontFamily: 'var(--font-instrument-serif)' }}
           >
-            Cartographie <span className="italic text-ohe-accent">procédurale</span>
+            Cartographie <span className="italic text-ohe-accent"></span>
           </h2>
           <div className="border border-ohe-line rounded-3xl p-10 bg-white">
             <ResultRadar
@@ -148,21 +148,7 @@ export default async function ResultPage() {
           </div>
         </section>
 
-        {/* Quadrant */}
-        <section className="mb-20">
-          <Eyebrow tone="accent">Profil déclaratif</Eyebrow>
-          <h2
-            className="text-4xl text-ohe-ink mt-3 mb-10"
-            style={{ fontFamily: 'var(--font-instrument-serif)' }}
-          >
-            Adaptation <span className="italic text-ohe-accent">& intérêt</span>
-          </h2>
-          <QuadrantMatrix
-            quadrant={((testSession as any).quadrant ?? 3) as 1 | 2 | 3 | 4}
-            scoreAdaptation={(testSession as any).scoreAdaptation ?? 0}
-            scoreInteret={(testSession as any).scoreInteret ?? 0}
-          />
-        </section>
+       
 
         {/* Actions */}
         <section className="mb-20">

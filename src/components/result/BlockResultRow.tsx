@@ -39,11 +39,12 @@ export default function BlockResultRow({ index, name, score }: BlockResultRowPro
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <span
-            className="text-ohe-ink"
-            style={{ fontFamily: "var(--font-instrument-serif)", fontStyle: "italic", fontSize: "18px" }}
-          >
-            {(score * 8).toFixed(1).replace(".0", "")}/8
-          </span>
+  className="text-ohe-ink"
+  style={{ fontFamily: "var(--font-instrument-serif)", fontStyle: "italic", fontSize: "18px" }}
+>
+  {Math.round(score * 100)} %
+</span>
+
           <span
             className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${TONE_STYLES[level.tone]}`}
           >

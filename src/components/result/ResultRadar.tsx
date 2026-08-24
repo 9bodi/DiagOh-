@@ -180,7 +180,7 @@ export default function ResultRadar({ scores, size = 560 }: ResultRadarProps) {
                   fontStyle: "italic",
                 }}
               >
-                {(axis.value * 8).toFixed(1).replace(".0", "")}/8
+{Math.round(axis.value * 100)} %
               </text>
             </g>
           );

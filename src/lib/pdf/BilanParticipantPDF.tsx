@@ -5,169 +5,277 @@ import {
   View,
   StyleSheet,
   Svg,
+  Polygon,
+  Line,
   Circle,
   Image,
 } from '@react-pdf/renderer';
-import path from 'path';
 
+// ============ Types exportés ============
+export interface BilanBlock {
+  label: string;
+  score: number;         // 0 → 1
+  correctCount: number;
+}
 
+export interface BilanData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  organizationName: string;
+  completedAt: Date;
+  level: 'A' | 'B1' | 'B2' | 'C';
+  scoreProcedural: number;   // /6
+  correctTotal: number;
+  blocks: BilanBlock[];
+  errors: unknown[];
+  reference: string;
+}
 
-// ============ Palette ============
+// ============ Palette OHé ============
 const COLORS = {
-  navy: '#1B3A5C',
-  orange: '#E97B4E',
-  cream: '#FDF8F0',
-  ink: '#1A1A1A',
-  slate600: '#475569',
-  slate500: '#64748B',
-  slate300: '#CBD5E1',
-  slate200: '#E2E8F0',
-  slate100: '#F1F5F9',
+  bg: '#F4F6FB',
+  panel: '#FFFFFF',
+  panelTint: '#EEF2FA',
+  ink: '#15171C',
+  muted: '#6A6E78',
+  accent: '#1E3A8A',
+  accentSoft: '#DDE3F2',      // teinte claire du bleu accent (au lieu de '#1E3A8A14')
+  line: '#D4D9E2',            // gris moyen (au lieu de 'rgba(21,23,28,0.13)')
+  lineSoft: '#E6EAF2',        // gris très clair (au lieu de 'rgba(21,23,28,0.06)')
   emerald: '#10B981',
   amber: '#F59E0B',
   red: '#DC2626',
-  white: '#FFFFFF',
 };
+
+
+// ============ Niveaux CECRL ============
+const LEVEL_META: Record<
+  BilanData['level'],
+  { label: string; tagline: string; index: number; interpretation: string }
+> = {
+  A: {
+    label: 'Élémentaire',
+    tagline: 'Des bases à consolider.',
+    index: 0,
+    interpretation:
+      'Vous maîtrisez certaines bases mais plusieurs points fondamentaux restent à consolider. Un accompagnement ciblé peut vous permettre de progresser rapidement sur les compétences essentielles.',
+  },
+  B1: {
+    label: 'Intermédiaire',
+    tagline: 'Une base en construction.',
+    index: 1,
+    interpretation:
+      'Vous avez une base solide sur plusieurs compétences, avec quelques axes de progression identifiés. Un travail ciblé sur les points faibles vous permettra de consolider votre maîtrise.',
+  },
+  B2: {
+    label: 'Avancé',
+    tagline: 'Une maîtrise solide.',
+    index: 2,
+    interpretation:
+      'Vous démontrez une maîtrise solide de l\'orthographe française. Quelques points fins peuvent encore être affinés pour atteindre un niveau expert.',
+  },
+  C: {
+    label: 'Expert',
+    tagline: 'Une excellente maîtrise.',
+    index: 3,
+    interpretation:
+      'Vous démontrez une excellente maîtrise de l\'orthographe française. Vos compétences sont solides sur l\'ensemble des domaines évalués.',
+  },
+};
+
+const LEVEL_ORDER: BilanData['level'][] = ['A', 'B1', 'B2', 'C'];
+
+// ============ Mentions par bloc ============
+function scoreToMention(score: number): { label: string; color: string } {
+  if (score >= 0.75) return { label: 'Maîtrisé', color: COLORS.emerald };
+  if (score >= 0.5) return { label: 'Axe de progression', color: COLORS.amber };
+  return { label: 'À renforcer', color: COLORS.red };
+}
 
 // ============ Styles ============
 const styles = StyleSheet.create({
   page: {
-    backgroundColor: COLORS.cream,
-    padding: 48,
+    backgroundColor: COLORS.bg,
+    padding: 44,
+    paddingTop: 32,
     fontFamily: 'Helvetica',
     fontSize: 10,
     color: COLORS.ink,
   },
 
-  // Header
+  // ─── Header uniforme (identique aux autres PDFs) ───
   topBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 14,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.navy,
-    marginBottom: 28,
+    justifyContent: 'space-between',
+    paddingBottom: 12,
+    borderBottomWidth: 0.6,
+    borderBottomColor: COLORS.line,
+    marginBottom: 22,
   },
-  logoText: { fontSize: 14, fontFamily: 'Times-Bold', color: COLORS.navy },
-  logoImg: { width: 60, height: 24, objectFit: 'contain' },
-
-  topMeta: { fontSize: 8, color: COLORS.slate500, letterSpacing: 1.2 },
-
-  // Title block
-  titleBlock: { marginBottom: 24 },
-  kicker: {
+  logoWrap: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  logoImg: { width: 34, height: 34, objectFit: 'contain' },
+  logoKicker: {
     fontSize: 8,
-    color: COLORS.orange,
-    letterSpacing: 1.8,
-    marginBottom: 8,
+    color: COLORS.accent,
+    letterSpacing: 1.2,
+    fontFamily: 'Helvetica-Bold',
   },
+  topMeta: {
+    fontSize: 8,
+    color: COLORS.muted,
+    letterSpacing: 1.2,
+  },
+
+  // ─── Titre ───
+  titleBlock: { marginBottom: 20 },
   title: {
     fontSize: 26,
     fontFamily: 'Times-Italic',
-    color: COLORS.navy,
-    marginBottom: 6,
+    color: COLORS.accent,
+    marginBottom: 8,
   },
-  identity: { fontSize: 10, color: COLORS.slate600 },
-  identityBold: { fontFamily: 'Times-Bold', color: COLORS.ink },
+  identity: { fontSize: 10, color: COLORS.muted },
+  identityBold: { fontFamily: 'Helvetica-Bold', color: COLORS.ink },
 
-  // Score row
-  scoreRow: {
+  // ─── Bloc principal Score + Niveau ───
+  mainRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 24,
-    marginBottom: 28,
-    paddingVertical: 8,
+    gap: 16,
+    marginBottom: 22,
   },
-  ringWrap: { width: 140, height: 140, alignItems: 'center', justifyContent: 'center' },
-  ringCenter: {
-    position: 'absolute',
+
+  // Score card (gauche)
+  scoreCard: {
+    width: 220,
+    backgroundColor: COLORS.panel,
+    borderWidth: 0.6,
+    borderColor: COLORS.line,
+    borderRadius: 12,
+    padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    width: 140,
-    height: 140,
   },
-  ringScore: {
-    fontSize: 38,
-    fontFamily: 'Times-Italic',
-    color: COLORS.navy,
-  },
-  ringMax: { fontSize: 10, color: COLORS.slate500, marginTop: -4 },
-
-  scoreMeta: { flex: 1 },
-  scoreKicker: {
+  scoreLabel: {
     fontSize: 8,
-    color: COLORS.orange,
-    letterSpacing: 1.6,
-    marginBottom: 6,
+    color: COLORS.muted,
+    letterSpacing: 1.4,
+    marginBottom: 10,
   },
-  scoreLevel: {
-    fontSize: 20,
-    fontFamily: 'Times-Bold',
-    color: COLORS.navy,
+  scoreValue: {
+    fontSize: 48,
+    fontFamily: 'Times-Italic',
+    color: COLORS.accent,
     marginBottom: 4,
   },
-  scoreLevelName: {
-    fontSize: 12,
+  scoreSub: { fontSize: 9, color: COLORS.muted },
+
+  // Niveau card (droite)
+  levelCard: {
+    flex: 1,
+    backgroundColor: COLORS.panelTint,
+    borderRadius: 12,
+    padding: 20,
+    justifyContent: 'center',
+  },
+  levelLabel: {
+    fontSize: 8,
+    color: COLORS.muted,
+    letterSpacing: 1.4,
+    marginBottom: 8,
+  },
+  levelBadge: {
+    fontSize: 44,
     fontFamily: 'Times-Italic',
-    color: COLORS.slate600,
-    marginBottom: 10,
+    color: COLORS.accent,
+    marginBottom: 2,
+  },
+  levelName: {
+    fontSize: 16,
+    fontFamily: 'Times-Italic',
+    color: COLORS.ink,
+    marginBottom: 4,
+  },
+  levelTag: {
+    fontSize: 10,
+    color: COLORS.muted,
+    marginBottom: 12,
   },
 
   // CECRL bar
   cecrlBar: { flexDirection: 'row', height: 6, marginBottom: 4 },
-  cecrlSeg: { flex: 1, backgroundColor: COLORS.slate200 },
-  cecrlSegActive: { backgroundColor: COLORS.navy },
-  cecrlSegDivider: { borderRightWidth: 1, borderRightColor: COLORS.cream },
-  cecrlLabels: { flexDirection: 'row', justifyContent: 'space-between' },
-  cecrlLabel: {
+  cecrlSeg: { flex: 1, backgroundColor: COLORS.lineSoft, marginRight: 2 },
+  cecrlSegLast: { marginRight: 0 },
+  cecrlSegActive: { backgroundColor: COLORS.accent },
+  cecrlLabelsRow: { flexDirection: 'row' },
+  cecrlLabelCell: {
     flex: 1,
     fontSize: 7,
-    color: COLORS.slate500,
+    color: COLORS.muted,
     letterSpacing: 1,
     textAlign: 'center',
+    marginRight: 2,
   },
-  cecrlLabelActive: { color: COLORS.navy, fontFamily: 'Times-Bold' },
+  cecrlLabelActive: {
+    color: COLORS.accent,
+    fontFamily: 'Helvetica-Bold',
+  },
 
-  // Interpretation
+  // ─── Interprétation ───
   interpretation: {
     fontSize: 10,
-    color: COLORS.slate600,
-    lineHeight: 1.7,
-    marginBottom: 8,
+    color: COLORS.muted,
+    lineHeight: 1.6,
+    marginBottom: 18,
   },
   interpretationLead: {
-    fontFamily: 'Times-Bold',
-    color: COLORS.navy,
+    fontFamily: 'Helvetica-Bold',
+    color: COLORS.accent,
   },
 
-  // Section
-  sectionKicker: {
-    fontSize: 8,
-    color: COLORS.orange,
-    letterSpacing: 1.8,
-    marginBottom: 14,
-    marginTop: 8,
+  // ─── Radar ───
+  radarCard: {
+    backgroundColor: COLORS.panel,
+    borderWidth: 0.6,
+    borderColor: COLORS.line,
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
   },
-  sectionTitle: {
-    fontSize: 18,
+  radarTitle: {
+    fontSize: 14,
     fontFamily: 'Times-Italic',
-    color: COLORS.navy,
+    color: COLORS.accent,
+    marginBottom: 8,
+  },
+  radarSub: {
+    fontSize: 9,
+    color: COLORS.muted,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+
+  // ─── Section titre (page 2) ───
+  sectionTitle: {
+    fontSize: 22,
+    fontFamily: 'Times-Italic',
+    color: COLORS.accent,
     marginBottom: 18,
   },
 
-  // Blocks
+  // ─── Blocs ───
   blockRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.slate200,
+    borderBottomColor: COLORS.lineSoft,
   },
   blockNum: {
-    width: 24,
+    width: 26,
     fontSize: 8,
-    color: COLORS.slate500,
+    color: COLORS.muted,
     letterSpacing: 1,
   },
   blockLabel: {
@@ -175,10 +283,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.ink,
   },
+  blockPct: {
+    width: 42,
+    fontSize: 10,
+    fontFamily: 'Helvetica-Bold',
+    color: COLORS.ink,
+    textAlign: 'right',
+    marginRight: 12,
+  },
   mentionWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    width: 130,
+    justifyContent: 'flex-end',
   },
   mentionDot: {
     width: 8,
@@ -187,283 +305,282 @@ const styles = StyleSheet.create({
   },
   mentionText: {
     fontSize: 10,
-    fontFamily: 'Times-Italic',
+    fontFamily: 'Helvetica-Bold',
   },
 
-  // Closing
+  // ─── Closing ───
   closingBox: {
     marginTop: 24,
-    padding: 16,
-    borderLeftWidth: 2,
-    borderLeftColor: COLORS.orange,
+    padding: 18,
+    backgroundColor: COLORS.panelTint,
+    borderRadius: 10,
   },
   closingText: {
     fontSize: 10,
-    color: COLORS.slate600,
-    lineHeight: 1.7,
-    fontFamily: 'Times-Italic',
+    color: COLORS.ink,
+    lineHeight: 1.6,
+    fontStyle: 'italic',
   },
 
-  // Footer
+  // ─── Signature ───
+  signature: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  signatureName: {
+    fontSize: 11,
+    fontFamily: 'Times-Italic',
+    color: COLORS.muted,
+  },
+  signatureTitle: {
+    fontSize: 8,
+    color: COLORS.muted,
+    letterSpacing: 1.2,
+    marginTop: 2,
+  },
+
+  // ─── Footer ───
   footer: {
     position: 'absolute',
     bottom: 24,
-    left: 48,
-    right: 48,
+    left: 44,
+    right: 44,
     flexDirection: 'row',
     justifyContent: 'space-between',
     fontSize: 7,
-    color: COLORS.slate500,
-    letterSpacing: 0.8,
-    paddingTop: 8,
-    borderTopWidth: 0.5,
-    borderTopColor: COLORS.slate200,
+    color: COLORS.muted,
+    letterSpacing: 1,
   },
 });
 
-// ============ Métadonnées ============
-const LEVELS = ['A', 'B1', 'B2', 'C'] as const;
+// ============ Composant Radar ============
+function Radar({ blocks }: { blocks: BilanBlock[] }) {
+  const size = 300;
+  const cx = size / 2;
+  const cy = size / 2;
+  const radius = 110;
 
-const LEVEL_META: Record<string, { name: string; interpretation: string }> = {
-  A: {
-    name: 'Élémentaire',
-    interpretation:
-      "Vos résultats montrent que les bases orthographiques méritent d'être consolidées. C'est un point de départ, pas une conclusion : avec un accompagnement adapté, la progression est rapide et durable.",
-  },
-  B1: {
-    name: 'Intermédiaire',
-    interpretation:
-      "Vous avez des bases solides sur lesquelles construire. Certaines règles restent à automatiser, mais votre socle est là. Un travail ciblé sur quelques points clés peut vous faire franchir un cap significatif.",
-  },
-  B2: {
-    name: 'Avancé',
-    interpretation:
-      "Vous disposez d'une maîtrise solide de l'orthographe et de la grammaire. Quelques subtilités peuvent encore être travaillées pour viser l'excellence, mais votre niveau actuel vous permet déjà d'écrire avec assurance.",
-  },
-  C: {
-    name: 'Expert',
-    interpretation:
-      "Vous maîtrisez très bien l'orthographe française, y compris ses règles les plus fines. Votre niveau est un véritable atout professionnel. Il ne reste qu'à peaufiner les nuances les plus subtiles.",
-  },
-};
+  // 6 axes régulièrement espacés, sommet en haut
+  const angles = blocks.map((_, i) => (Math.PI * 2 * i) / blocks.length - Math.PI / 2);
 
-// ============ Score → mention ============
-type Mention = {
-  label: string;
-  color: string;
-};
-
-function scoreToMention(score: number): Mention {
-  if (score >= 0.75) return { label: 'Maîtrisé', color: COLORS.emerald };
-  if (score >= 0.5) return { label: 'Axe de progression', color: COLORS.amber };
-  return { label: 'À renforcer', color: COLORS.red };
-}
-
-// ============ Types ============
-export interface BilanBlock {
-  label: string;
-  score: number;
-  correctCount: number;
-}
-
-export interface BilanError {
-  blockLabel: string;
-  questionText: string;
-  userAnswer: string | null;
-  correctAnswer: string;
-}
-
-export interface BilanData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  organizationName: string;
-  groupName?: string;
-  completedAt: Date;
-  level: 'A' | 'B1' | 'B2' | 'C';
-  scoreProcedural: number;
-  correctTotal: number;
-  blocks: BilanBlock[];
-  errors: BilanError[];
-  reference?: string;
-}
-const LOGO_PATH = path.join(process.cwd(), 'public', 'img', 'logos', 'ohe-logo.png');
-
-// ============ Composant ============
-export default function BilanParticipantPDF({ data, logo }: { data: BilanData; logo?: Buffer }) {
-
-  const dateStr = new Date(data.completedAt).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
+  const point = (r: number, angle: number) => ({
+    x: cx + Math.cos(angle) * r,
+    y: cy + Math.sin(angle) * r,
   });
-  const levelInfo = LEVEL_META[data.level] ?? LEVEL_META.A;
-  const fullName = `${data.firstName} ${data.lastName}`.trim() || 'Participant·e';
-  const d = new Date(data.completedAt);
-  const ref =
-    data.reference ??
-    `OHE-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 
-  // Ring calculations
-  const radius = 60;
-  const circumference = 2 * Math.PI * radius;
-  const scorePercent = data.scoreProcedural / 6;
-  const dashOffset = circumference * (1 - scorePercent);
-  const activeLevelIndex = LEVELS.indexOf(data.level);
+  // Grille de fond : 4 polygones concentriques (0.25, 0.5, 0.75, 1)
+  const gridLevels = [0.25, 0.5, 0.75, 1];
+  const gridPolygons = gridLevels.map((level) => {
+    const pts = angles.map((a) => point(radius * level, a));
+    return pts.map((p) => `${p.x},${p.y}`).join(' ');
+  });
 
-  // Identity line
-  const identityParts = [data.organizationName];
-  if (data.groupName) identityParts.push(data.groupName);
+  // Axes
+  const axes = angles.map((a) => point(radius, a));
+
+  // Zone de données
+  const dataPoints = blocks.map((b, i) => point(radius * Math.max(0.02, b.score), angles[i]));
+  const dataPolygon = dataPoints.map((p) => `${p.x},${p.y}`).join(' ');
+
+  // Labels
+  const labels = blocks.map((b, i) => {
+    const p = point(radius + 22, angles[i]);
+    return { text: b.label, x: p.x, y: p.y };
+  });
 
   return (
-    <Document>
-      {/* ============ PAGE 1 — Synthèse ============ */}
+    <Svg width={size} height={size}>
+      {/* Grille */}
+      {gridPolygons.map((pts, idx) => (
+        <Polygon
+  key={`grid-${idx}`}
+  points={pts}
+  fill="none"
+  stroke={COLORS.lineSoft}
+  strokeWidth={0.6}
+/>
+
+      ))}
+      {/* Axes */}
+      {axes.map((p, idx) => (
+        <Line
+          key={`axis-${idx}`}
+          x1={cx}
+          y1={cy}
+          x2={p.x}
+          y2={p.y}
+          stroke={COLORS.lineSoft}
+          strokeWidth={0.6}
+        />
+      ))}
+      {/* Zone données */}
+      <Polygon
+        points={dataPolygon}
+        fill={COLORS.accentSoft}
+        stroke={COLORS.accent}
+        strokeWidth={1.5}
+      />
+      {/* Points de données */}
+      {dataPoints.map((p, idx) => (
+        <Circle key={`pt-${idx}`} cx={p.x} cy={p.y} r={2.4} fill={COLORS.accent} />
+      ))}
+      {/* Labels */}
+      {labels.map((l, idx) => (
+        <Text
+          key={`lbl-${idx}`}
+          x={l.x}
+          y={l.y}
+          style={{
+            fontSize: 7.5,
+            fill: COLORS.muted,
+            textAnchor: 'middle',
+          }}
+        >
+          {l.text}
+        </Text>
+      ))}
+    </Svg>
+  );
+}
+
+// ============ Composant Header ============
+function Header({ data }: { data: BilanData; logo?: Uint8Array | Buffer }) {
+  const fullName = `${data.firstName} ${data.lastName}`.trim() || 'Participant';
+  return (
+    <View style={styles.topBar}>
+      <View style={styles.logoWrap}>
+        <Text style={styles.logoKicker}>
+          BILAN — {fullName.toUpperCase()} — {(data.organizationName || 'ORGANISATION').toUpperCase()}
+        </Text>
+      </View>
+      <Text style={styles.topMeta}>
+        {new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(data.completedAt)}
+      </Text>
+    </View>
+  );
+}
+
+// ============ Composant principal ============
+export default function BilanParticipantPDF({
+  data,
+  logo,
+}: {
+  data: BilanData;
+  logo?: Uint8Array | Buffer;
+}) {
+  const levelMeta = LEVEL_META[data.level] ?? LEVEL_META.A;
+  const scorePct = Math.round((data.scoreProcedural / 6) * 100);
+  const fullName = `${data.firstName} ${data.lastName}`.trim() || 'Participant';
+
+  return (
+    <Document
+      title={`Bilan ${fullName}`}
+      author="OHé Diag"
+      subject="Bilan de diagnostic orthographique"
+    >
+      {/* ═══════════════ PAGE 1 ═══════════════ */}
       <Page size="A4" style={styles.page}>
-        {/* Top bar */}
-        <View style={styles.topBar}>
-          {logo ? <Image src={logo} style={styles.logoImg} /> : <Text style={styles.logoText}>OHé</Text>}
+        <Header data={data} logo={logo} />
 
-
-
-          <Text style={styles.topMeta}>
-            BILAN INDIVIDUEL · {dateStr.toUpperCase()}
-          </Text>
-        </View>
-
-        {/* Title */}
+        {/* Titre + identité */}
         <View style={styles.titleBlock}>
-          <Text style={styles.kicker}> VOTRE BILAN D&apos;ORTHOGRAPHE</Text>
           <Text style={styles.title}>Bilan de diagnostic</Text>
           <Text style={styles.identity}>
             <Text style={styles.identityBold}>{fullName}</Text>
-            {'  ·  '}
+            {' · '}
             {data.email}
-            {'\n'}
-            {identityParts.join(' · ')}
+            {data.organizationName ? ` · ${data.organizationName}` : ''}
           </Text>
         </View>
 
-        {/* Score + Level */}
-        <View style={styles.scoreRow}>
-          {/* Ring */}
-          <View style={styles.ringWrap}>
-            <Svg width={140} height={140} viewBox="0 0 140 140">
-              <Circle
-                cx={70}
-                cy={70}
-                r={radius}
-                stroke={COLORS.slate200}
-                strokeWidth={8}
-                fill="none"
-              />
-              <Circle
-                cx={70}
-                cy={70}
-                r={radius}
-                stroke={COLORS.navy}
-                strokeWidth={8}
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray={`${circumference} ${circumference}`}
-                transform="rotate(-90 70 70)"
-                {...({ 'stroke-dashoffset': dashOffset } as unknown as object)}
-              />
-            </Svg>
-            <View style={styles.ringCenter}>
-              <Text style={styles.ringScore}>
-  {data.scoreProcedural.toFixed(2).replace('.', ',')}
-</Text>
+        {/* Bloc Score + Niveau */}
+        <View style={styles.mainRow}>
+          {/* Score global */}
+          <View style={styles.scoreCard}>
+            <Text style={styles.scoreLabel}>SCORE GLOBAL</Text>
+            <Text style={styles.scoreValue}>{scorePct} %</Text>
+            <Text style={styles.scoreSub}>
+              {data.correctTotal} bonnes réponses
+            </Text>
+          </View>
 
-              <Text style={styles.ringMax}>/ 6</Text>
+          {/* Niveau CECRL */}
+          <View style={styles.levelCard}>
+            <Text style={styles.levelLabel}>NIVEAU CECRL</Text>
+            <Text style={styles.levelBadge}>{data.level}</Text>
+            <Text style={styles.levelName}>{levelMeta.label}</Text>
+            <Text style={styles.levelTag}>{levelMeta.tagline}</Text>
+
+            {/* Barre CECRL 4 segments */}
+            <View style={styles.cecrlBar}>
+              {LEVEL_ORDER.map((lvl, i) => (
+                <View
+                  key={lvl}
+                  style={[
+                    styles.cecrlSeg,
+                    i === LEVEL_ORDER.length - 1 && styles.cecrlSegLast,
+                    i <= levelMeta.index && styles.cecrlSegActive,
+                  ]}
+                />
+              ))}
+            </View>
+            <View style={styles.cecrlLabelsRow}>
+              {LEVEL_ORDER.map((lvl, i) => (
+                <Text
+                  key={lvl}
+                  style={[
+                    styles.cecrlLabelCell,
+                    i === LEVEL_ORDER.length - 1 && { marginRight: 0 },
+                    i === levelMeta.index && styles.cecrlLabelActive,
+                  ]}
+                >
+                  {lvl}
+                </Text>
+              ))}
             </View>
           </View>
-
-          {/* Level meta */}
-          <View style={styles.scoreMeta}>
-            <Text style={styles.scoreKicker}>NIVEAU CECRL</Text>
-            <Text style={styles.scoreLevel}>{data.level}</Text>
-            <Text style={styles.scoreLevelName}>{levelInfo.name}</Text>
-
-            {/* CECRL bar */}
-<View style={styles.cecrlBar}>
-  {LEVELS.map((lv, i) => {
-    const isActive = i <= activeLevelIndex;
-    const isNotLast = i < LEVELS.length - 1;
-    return (
-      <View
-        key={lv}
-        style={[
-          styles.cecrlSeg,
-          isActive ? styles.cecrlSegActive : styles.cecrlSeg,
-          isNotLast ? styles.cecrlSegDivider : styles.cecrlSeg,
-        ]}
-      />
-    );
-  })}
-</View>
-<View style={styles.cecrlLabels}>
-  {LEVELS.map((lv) => (
-    <Text
-      key={lv}
-      style={[
-        styles.cecrlLabel,
-        lv === data.level ? styles.cecrlLabelActive : styles.cecrlLabel,
-      ]}
-    >
-      {lv === data.level ? `${lv} ▲` : lv}
-    </Text>
-  ))}
-</View>
-
-          </View>
         </View>
 
-        {/* Interpretation */}
-        <Text style={styles.sectionKicker}> CE QUE CELA SIGNIFIE</Text>
+        {/* Interprétation */}
         <Text style={styles.interpretation}>
-          <Text style={styles.interpretationLead}>
-            Niveau {data.level} — {levelInfo.name}.{' '}
-          </Text>
-          {levelInfo.interpretation}
+          <Text style={styles.interpretationLead}>Ce que cela signifie. </Text>
+          {levelMeta.interpretation}
         </Text>
+
+        {/* Radar */}
+        <View style={styles.radarCard}>
+          <Text style={styles.radarTitle}>Profil de compétences</Text>
+          <Text style={styles.radarSub}>
+            Vos performances sur les six domaines évalués
+          </Text>
+          <Radar blocks={data.blocks} />
+        </View>
 
         {/* Footer */}
         <View style={styles.footer} fixed>
-          <Text>OHÉ · DOCUMENT CONFIDENTIEL · RÉF {ref}</Text>
+          <Text>OHÉ · DOCUMENT CONFIDENTIEL · RÉF {data.reference}</Text>
           <Text
-            render={({ pageNumber, totalPages }) =>
-              `P. ${pageNumber} / ${totalPages}`
-            }
+            render={({ pageNumber, totalPages }) => `P. ${pageNumber} / ${totalPages}`}
           />
         </View>
       </Page>
 
-      {/* ============ PAGE 2 — Détail par compétence ============ */}
+      {/* ═══════════════ PAGE 2 ═══════════════ */}
       <Page size="A4" style={styles.page}>
-        {/* Top bar */}
-        <View style={styles.topBar}>
-          {logo ? <Image src={logo} style={styles.logoImg} /> : <Text style={styles.logoText}>OHé</Text>}
+        <Header data={data} logo={logo} />
 
-
-
-          <Text style={styles.topMeta}>
-            BILAN INDIVIDUEL · {dateStr.toUpperCase()}
-          </Text>
-        </View>
-
-        <Text style={styles.sectionKicker}> DÉTAIL PAR COMPÉTENCE</Text>
         <Text style={styles.sectionTitle}>Vos six domaines évalués</Text>
 
         {data.blocks.map((b, i) => {
+          const pct = Math.round(b.score * 100);
           const mention = scoreToMention(b.score);
           return (
             <View key={i} style={styles.blockRow}>
               <Text style={styles.blockNum}>{String(i + 1).padStart(2, '0')}</Text>
               <Text style={styles.blockLabel}>{b.label}</Text>
+              <Text style={styles.blockPct}>{pct} %</Text>
               <View style={styles.mentionWrap}>
-                <View
-                  style={[styles.mentionDot, { backgroundColor: mention.color }]}
-                />
+                <View style={[styles.mentionDot, { backgroundColor: mention.color }]} />
                 <Text style={[styles.mentionText, { color: mention.color }]}>
                   {mention.label}
                 </Text>
@@ -481,13 +598,17 @@ export default function BilanParticipantPDF({ data, logo }: { data: BilanData; l
           </Text>
         </View>
 
+        {/* Signature */}
+        <View style={styles.signature}>
+          <Text style={styles.signatureName}>Diagnostic conçu par Roxane Joannidès</Text>
+          <Text style={styles.signatureTitle}>DOCTEURE EN SCIENCES DU LANGAGE</Text>
+        </View>
+
         {/* Footer */}
         <View style={styles.footer} fixed>
-          <Text>OHÉ · DOCUMENT CONFIDENTIEL · RÉF {ref}</Text>
+          <Text>OHÉ · DOCUMENT CONFIDENTIEL · RÉF {data.reference}</Text>
           <Text
-            render={({ pageNumber, totalPages }) =>
-              `P. ${pageNumber} / ${totalPages}`
-            }
+            render={({ pageNumber, totalPages }) => `P. ${pageNumber} / ${totalPages}`}
           />
         </View>
       </Page>
