@@ -513,31 +513,33 @@ export default function BilanParticipantPDF({
 
             {/* Barre CECRL 4 segments */}
             <View style={styles.cecrlBar}>
-              {LEVEL_ORDER.map((lvl, i) => (
-                <View
-                  key={lvl}
-                  style={[
-                    styles.cecrlSeg,
-                    i === LEVEL_ORDER.length - 1 && styles.cecrlSegLast,
-                    i <= levelMeta.index && styles.cecrlSegActive,
-                  ]}
-                />
-              ))}
-            </View>
+  {LEVEL_ORDER.map((lvl, i) => (
+    <View
+      key={lvl}
+      style={[
+        styles.cecrlSeg,
+        i === LEVEL_ORDER.length - 1 ? styles.cecrlSegLast : {},
+        i <= levelMeta.index ? styles.cecrlSegActive : {},
+      ]}
+    />
+  ))}
+</View>
+
             <View style={styles.cecrlLabelsRow}>
-              {LEVEL_ORDER.map((lvl, i) => (
-                <Text
-                  key={lvl}
-                  style={[
-                    styles.cecrlLabelCell,
-                    i === LEVEL_ORDER.length - 1 && { marginRight: 0 },
-                    i === levelMeta.index && styles.cecrlLabelActive,
-                  ]}
-                >
-                  {lvl}
-                </Text>
-              ))}
-            </View>
+  {LEVEL_ORDER.map((lvl, i) => (
+    <Text
+      key={lvl}
+      style={[
+        styles.cecrlLabelCell,
+        i === LEVEL_ORDER.length - 1 ? { marginRight: 0 } : {},
+        i === levelMeta.index ? styles.cecrlLabelActive : {},
+      ]}
+    >
+      {lvl}
+    </Text>
+  ))}
+</View>
+
           </View>
         </View>
 
