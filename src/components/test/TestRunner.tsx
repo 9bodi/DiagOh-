@@ -41,6 +41,7 @@ export default function TestRunner({ userName }: { userName: string }) {
   const [showExitModal, setShowExitModal] = useState(false);
   const [pendingInterstitial, setPendingInterstitial] = useState<InterstitialConfig | null>(null);
   const questionStartRef = useRef<number>(Date.now());
+const completedRef = useRef(false);
 
   const applyPayload = useCallback((payload: QuestionPayload) => {
     setData(payload);
@@ -100,6 +101,7 @@ export default function TestRunner({ userName }: { userName: string }) {
   }, []);
 
   const fetchNextQuestion = useCallback(async () => {
+    if (completedRef.current) return;
     try {
       const res = await fetch('/api/test/question');
 
@@ -131,6 +133,7 @@ export default function TestRunner({ userName }: { userName: string }) {
 
   const submitAnswer = useCallback(
     async (answer: number | null) => {
+      if (completedRef.current) return;
       if (!data || submitting || pendingInterstitial) return;
       setSubmitting(true);
 
@@ -169,14 +172,18 @@ export default function TestRunner({ userName }: { userName: string }) {
   );
 
   async function completeTest() {
-    try {
-      await fetch('/api/test/complete', { method: 'POST' });
-      router.push('/result');
-    } catch (e) {
-      console.error(e);
-      setError('Erreur lors de la finalisation du test.');
-    }
+  if (completedRef.current) return;
+  completedRef.current = true;
+  try {
+    await fetch('/api/test/complete', { method: 'POST' });
+    router.push('/result');
+  } catch (e) {
+    console.error(e);
+    setError('Erreur lors de la finalisation du test.');
+    completedRef.current = false; // permet retry en cas d'échec réseau
   }
+}
+
 
   // Loading state
   if (loading) {

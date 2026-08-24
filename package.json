@@ -3,15 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-"build": "prisma generate && prisma migrate deploy && next build",
+"dev": "NODE_OPTIONS='--max-old-space-size=8192' next dev --webpack",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "postinstall": "prisma generate"
   },
   "prisma": {
-  "seed": "tsx prisma/seed-questions.ts"
-}
-,
+    "seed": "tsx prisma/seed-questions.ts"
+  },
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "@react-pdf/renderer": "^4.5.1",

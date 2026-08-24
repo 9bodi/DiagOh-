@@ -15,14 +15,30 @@ export async function POST() {
   }
 
   const active = await getActiveSession(session.user.id);
+
+  // 🔁 Idempotence : si pas de session active, vérifier s'il y en a une déjà complétée
   if (!active) {
+    const lastCompleted = await prisma.testSession.findFirst({
+      where: { userId: session.user.id, status: TestStatus.COMPLETED },
+      orderBy: { completedAt: 'desc' },
+    });
+    if (lastCompleted) {
+      return NextResponse.json({
+        completed: true,
+        alreadyCompleted: true,
+        sessionId: lastCompleted.id,
+        level: lastCompleted.level,
+        scoreProcedural: lastCompleted.scoreProcedural,
+        scoreAdaptation: lastCompleted.scoreAdaptation,
+        scoreInteret: lastCompleted.scoreInteret,
+        quadrant: lastCompleted.quadrant,
+      });
+    }
     return NextResponse.json({ error: 'No active session' }, { status: 404 });
   }
 
   const scores = await computeAndSaveScores(active.id);
 
-  // Marque la session comme complétée + sauvegarde tous les scores
-  // Le crédit a déjà été consommé à l'invitation, plus rien à faire ici.
   await prisma.testSession.update({
     where: { id: active.id },
     data: {
@@ -43,15 +59,11 @@ export async function POST() {
     },
   });
 
-  // ============================================================================
-  // NOTIFICATION EMAIL au participant (best-effort, ne bloque pas la réponse HTTP)
-  // ============================================================================
+  // NOTIFICATION EMAIL (best-effort)
   try {
     const participant = await prisma.user.findUnique({
       where: { id: session.user.id },
-      include: {
-        organization: { select: { name: true } },
-      },
+      include: { organization: { select: { name: true } } },
     });
 
     if (participant?.email && participant.organization) {
@@ -68,6 +80,7 @@ export async function POST() {
 
   return NextResponse.json({
     completed: true,
+    alreadyCompleted: false,
     sessionId: active.id,
     level: scores.level,
     scoreProcedural: scores.scoreProcedural,

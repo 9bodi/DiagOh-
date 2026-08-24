@@ -117,17 +117,9 @@ export default async function RulesPage() {
           })}
         </div>
 
-        {/* Signe décoratif en fond */}
-        <div
-          className="absolute pointer-events-none select-none font-serif italic -right-6 -bottom-10 lg:-right-10 lg:-bottom-20"
-          style={{
-            fontSize: 320,
-            lineHeight: 1,
-            color: 'var(--color-ohe-accent-soft)',
-          }}
-        >
-          ✱
-        </div>
+       
+          
+        
       </div>
     </main>
   );

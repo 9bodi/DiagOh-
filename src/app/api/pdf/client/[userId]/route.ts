@@ -46,7 +46,6 @@ export async function GET(
     return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
   }
 
-  // Admin uniquement (pas le participant lui-même)
   const isAdminSameOrg =
     session.user.role === 'ADMIN' &&
     session.user.organizationId === targetUser.organizationId;
@@ -71,6 +70,13 @@ export async function GET(
 
   const proceduralAnswers = answers.filter(a => a.question.type === 'PROCEDURAL');
   const correctTotal = proceduralAnswers.filter(a => a.isCorrect).length;
+
+  // Temps moyen par question (toutes réponses, en secondes)
+  const answersWithTime = answers.filter(a => a.timeSpent != null && a.timeSpent > 0);
+  const avgTimePerQuestion = answersWithTime.length > 0
+    ? answersWithTime.reduce((sum, a) => sum + (a.timeSpent ?? 0), 0) / answersWithTime.length
+    : null;
+  const totalTimeSeconds = answersWithTime.reduce((sum, a) => sum + (a.timeSpent ?? 0), 0);
 
   const blocks: BilanBlock[] = [];
   for (let blockNum = 1; blockNum <= 6; blockNum++) {
@@ -109,11 +115,14 @@ export async function GET(
     quadrant: (s.quadrant ?? 3) as 1 | 2 | 3 | 4,
     scoreAdaptation: s.scoreAdaptation ?? 0,
     scoreInteret: s.scoreInteret ?? 0,
+    recommandation: s.recommandation ?? null,
+    avgTimePerQuestion,
+    totalTimeSeconds,
     reference,
   };
 
   const logoPath = path.join(process.cwd(), 'public', 'img', 'logos', 'ohe-logo.png');
-const logo = fs.existsSync(logoPath) ? fs.readFileSync(logoPath) : undefined;
+  const logo = fs.existsSync(logoPath) ? fs.readFileSync(logoPath) : undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const element = React.createElement(BilanClientPDF, { data, logo }) as any;

@@ -73,7 +73,7 @@ export default function QuadrantMatrix({ quadrant, scoreAdaptation, scoreInteret
       </div>
 
       <div className="mt-10 border border-ohe-line rounded-2xl p-6 bg-white">
-        <div className="ohe-eyebrow text-ohe-accent mb-2">✱ Votre profil</div>
+        <div className="ohe-eyebrow text-ohe-accent mb-2">Votre profil</div>
         <h3
           className="text-2xl text-ohe-ink mb-1"
           style={{ fontFamily: "var(--font-instrument-serif)", fontStyle: "italic" }}

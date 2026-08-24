@@ -36,17 +36,27 @@ export default async function UsersPage() {
       testSessions: {
         orderBy: { createdAt: 'desc' },
         take: 1,
-        select: {
+                select: {
           id: true,
           status: true,
           level: true,
           scoreProcedural: true,
+          scoreBloc1: true,
+          scoreBloc2: true,
+          scoreBloc3: true,
+          scoreBloc4: true,
+          scoreBloc5: true,
+          scoreBloc6: true,
+          scoreAdaptation: true,
+          scoreInteret: true,
           quadrant: true,
+          recommandation: true,
           completedAt: true,
           deadline: true,
           activatedAt: true,
           answers: { select: { timeSpent: true } },
         },
+
       },
     },
   });
@@ -74,7 +84,7 @@ export default async function UsersPage() {
       }
     }
 
-    return {
+        return {
       id: u.id,
       email: u.email,
       firstName: u.firstName,
@@ -83,7 +93,16 @@ export default async function UsersPage() {
       status: latestSession?.status ?? 'PENDING',
       level: latestSession?.level ?? null,
       score: latestSession?.scoreProcedural ?? null,
+      scoreBloc1: latestSession?.scoreBloc1 ?? null,
+      scoreBloc2: latestSession?.scoreBloc2 ?? null,
+      scoreBloc3: latestSession?.scoreBloc3 ?? null,
+      scoreBloc4: latestSession?.scoreBloc4 ?? null,
+      scoreBloc5: latestSession?.scoreBloc5 ?? null,
+      scoreBloc6: latestSession?.scoreBloc6 ?? null,
+      scoreAdaptation: latestSession?.scoreAdaptation ?? null,
+      scoreInteret: latestSession?.scoreInteret ?? null,
       quadrant: latestSession?.quadrant ?? null,
+      recommandation: latestSession?.recommandation ?? null,
       avgTimePerQuestion,
       completedAt: latestSession?.completedAt?.toISOString() ?? null,
       sessionId: latestSession?.id ?? null,
@@ -92,6 +111,7 @@ export default async function UsersPage() {
       groupId: u.groupId,
       groupName: u.group?.name ?? null,
     };
+
   });
 
   return (

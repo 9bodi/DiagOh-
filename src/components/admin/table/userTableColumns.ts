@@ -7,7 +7,16 @@ export interface UserRow {
   status: string;
   level: string | null;
   score: number | null;
+  scoreBloc1?: number | null;
+  scoreBloc2?: number | null;
+  scoreBloc3?: number | null;
+  scoreBloc4?: number | null;
+  scoreBloc5?: number | null;
+  scoreBloc6?: number | null;
+  scoreAdaptation?: number | null;
+  scoreInteret?: number | null;
   quadrant?: number | null;
+  recommandation?: string | null;
   avgTimePerQuestion?: number | null;
   completedAt: string | null;
   sessionId: string | null;
@@ -16,6 +25,7 @@ export interface UserRow {
   groupId: string | null;
   groupName: string | null;
 }
+
 
 export type ColumnKey =
   | 'select'

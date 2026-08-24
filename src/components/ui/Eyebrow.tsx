@@ -5,7 +5,7 @@ interface EyebrowProps {
   className?: string;
 }
 
-export function Eyebrow({ children, mark = "✱", tone = "muted", className = "" }: EyebrowProps) {
+export function Eyebrow({ children, mark = "", tone = "muted", className = "" }: EyebrowProps) {
   const toneClass =
     tone === "accent" ? "text-ohe-accent" :
     tone === "ink" ? "text-ohe-ink" :

@@ -11,7 +11,14 @@ export async function GET() {
   }
 
   const testSession = await getActiveSession(session.user.id);
-  if (!testSession) {
+    if (!testSession) {
+    const lastCompleted = await prisma.testSession.findFirst({
+      where: { userId: session.user.id, status: 'COMPLETED' },
+      orderBy: { completedAt: 'desc' },
+    });
+    if (lastCompleted) {
+      return NextResponse.json({ finished: true, alreadyCompleted: true });
+    }
     return NextResponse.json({ error: 'Aucune session active' }, { status: 404 });
   }
 
