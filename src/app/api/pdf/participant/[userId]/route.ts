@@ -72,6 +72,10 @@ export async function GET(
 
   const proceduralAnswers = answers.filter(a => a.question.type === 'PROCEDURAL');
   const correctTotal = proceduralAnswers.filter(a => a.isCorrect).length;
+const totalTimeSeconds = proceduralAnswers.reduce(
+  (sum, a) => sum + (a.timeSpent ?? 0),
+  0,
+);
 
   const blocks: BilanBlock[] = [];
   for (let blockNum = 1; blockNum <= 6; blockNum++) {
@@ -96,18 +100,20 @@ export async function GET(
   const reference = `OHE-${orgSlug}-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 
   const data: BilanData = {
-    firstName: targetUser.firstName ?? '',
-    lastName: targetUser.lastName ?? '',
-    email: targetUser.email,
-    organizationName: targetUser.organization?.name ?? 'Organisation',
-    completedAt: lastSession.completedAt,
-    level: (lastSession.level ?? 'A') as 'A' | 'B1' | 'B2' | 'C',
-    scoreProcedural: lastSession.scoreProcedural ?? 0,
-    correctTotal,
-    blocks,
-    errors: [],
-    reference,
-  };
+  firstName: targetUser.firstName ?? '',
+  lastName: targetUser.lastName ?? '',
+  email: targetUser.email,
+  organizationName: targetUser.organization?.name ?? 'Organisation',
+  completedAt: lastSession.completedAt,
+  totalTimeSeconds,
+  level: (lastSession.level ?? 'A') as 'A' | 'B1' | 'B2' | 'C',
+  scoreProcedural: lastSession.scoreProcedural ?? 0,
+  correctTotal,
+  blocks,
+  errors: [],
+  reference,
+};
+
 
   const logoPath = path.join(process.cwd(), 'public', 'img', 'logos', 'ohe-logo.png');
 const logo = fs.existsSync(logoPath) ? fs.readFileSync(logoPath) : undefined;

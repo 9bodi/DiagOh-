@@ -24,6 +24,7 @@ export interface BilanData {
   email: string;
   organizationName: string;
   completedAt: Date;
+  totalTimeSeconds: number;  // temps total passé à répondre (somme Answer.timeSpent)
   level: 'A' | 'B1' | 'B2' | 'C';
   scoreProcedural: number;   // /6
   correctTotal: number;
@@ -40,82 +41,108 @@ const COLORS = {
   ink: '#15171C',
   muted: '#6A6E78',
   accent: '#1E3A8A',
-  accentSoft: '#DDE3F2',      // teinte claire du bleu accent (au lieu de '#1E3A8A14')
-  line: '#D4D9E2',            // gris moyen (au lieu de 'rgba(21,23,28,0.13)')
-  lineSoft: '#E6EAF2',        // gris très clair (au lieu de 'rgba(21,23,28,0.06)')
-  emerald: '#10B981',
-  amber: '#F59E0B',
-  red: '#DC2626',
+  accentSoft: '#DDE3F2',
+  line: '#D4D9E2',
+  lineSoft: '#E6EAF2',
+  emerald: '#10B981',   // Maîtrisé
+  accentBlue: '#1E3A8A', // En cours de maîtrise
+  amber: '#F59E0B',      // Fragile
+  red: '#DC2626',        // Non maîtrisé
 };
 
-
-// ============ Niveaux CECRL ============
+// ============ Niveaux (sans mention CECRL) ============
 const LEVEL_META: Record<
   BilanData['level'],
-  { label: string; tagline: string; index: number; interpretation: string }
+  { label: string; tagline: string; index: number; interpretation: string; preconisation: string }
 > = {
   A: {
     label: 'Élémentaire',
-    tagline: 'Des bases à consolider.',
+    tagline: 'Besoins de base.',
     index: 0,
     interpretation:
-      'Vous maîtrisez certaines bases mais plusieurs points fondamentaux restent à consolider. Un accompagnement ciblé peut vous permettre de progresser rapidement sur les compétences essentielles.',
+      "Les fondamentaux de l'orthographe restent insuffisamment maîtrisés pour être mobilisés de façon régulière.",
+    preconisation:
+      "Il se peut que votre niveau soit en dessous du niveau travaillé dans la formation OHé. OHé propose une remise à niveau en orthographe grammaticale, avec un travail progressif sur les accords, notamment sur celui des verbes à tous les temps et au participe passé. Une formation adaptée à votre niveau peut constituer une première étape.",
   },
   B1: {
     label: 'Intermédiaire',
-    tagline: 'Une base en construction.',
+    tagline: 'Besoins techniques.',
     index: 1,
     interpretation:
-      'Vous avez une base solide sur plusieurs compétences, avec quelques axes de progression identifiés. Un travail ciblé sur les points faibles vous permettra de consolider votre maîtrise.',
+      "Les bases de l'orthographe sont acquises, mais certaines règles restent fragiles.",
+    preconisation:
+      "Votre niveau correspond à celui auquel s'adresse en priorité la formation OHé. Une méthode ludique, sans règles à mémoriser, pour reprendre confiance en son orthographe en 10 minutes par jour. Fondée sur la logique et les sciences cognitives, elle est adaptée aux troubles DYS. Elle permet de maîtriser les accords, notamment celui des verbes à tous les temps et au participe passé. Les fautes ne sont pas une fatalité, mais un problème de méthode.",
   },
   B2: {
     label: 'Avancé',
-    tagline: 'Une maîtrise solide.',
+    tagline: 'Besoins professionnels.',
     index: 2,
     interpretation:
-      'Vous démontrez une maîtrise solide de l\'orthographe française. Quelques points fins peuvent encore être affinés pour atteindre un niveau expert.',
+      "Les principales règles sont maîtrisées, mais certaines difficultés persistent dans des situations plus complexes.",
+    preconisation:
+      "Votre niveau correspond à celui auquel s'adresse en priorité la formation OHé. Une méthode ludique, sans règles à mémoriser, pour reprendre confiance en son orthographe en 10 minutes par jour. Fondée sur la logique et les sciences cognitives, elle est adaptée aux troubles DYS. Elle permet de maîtriser les accords, notamment celui des verbes à tous les temps et au participe passé. Les fautes ne sont pas une fatalité, mais un problème de méthode.",
   },
   C: {
     label: 'Expert',
-    tagline: 'Une excellente maîtrise.',
+    tagline: 'Besoins experts.',
     index: 3,
     interpretation:
-      'Vous démontrez une excellente maîtrise de l\'orthographe française. Vos compétences sont solides sur l\'ensemble des domaines évalués.',
+      "Les principales règles d'orthographe sont maîtrisées, y compris dans des situations complexes.",
+    preconisation:
+      "Il se peut que votre niveau soit supérieur à celui travaillé dans la formation OHé. OHé propose surtout une remise à niveau en orthographe grammaticale, avec un travail progressif sur les accords, notamment sur celui des verbes à tous les temps et au participe passé.",
   },
 };
 
 const LEVEL_ORDER: BilanData['level'][] = ['A', 'B1', 'B2', 'C'];
 
-// ============ Mentions par bloc ============
-function scoreToMention(score: number): { label: string; color: string } {
-  if (score >= 0.75) return { label: 'Maîtrisé', color: COLORS.emerald };
-  if (score >= 0.5) return { label: 'Axe de progression', color: COLORS.amber };
-  return { label: 'À renforcer', color: COLORS.red };
+// ============ Niveau de maîtrise par bloc (4 seuils Roxane) ============
+function scoreToMastery(score: number): { label: string; color: string } {
+  if (score >= 0.875) return { label: 'Maîtrisé', color: COLORS.emerald };           // 7-8/8
+  if (score >= 0.625) return { label: 'En cours de maîtrise', color: COLORS.accentBlue }; // 5-6/8
+  if (score >= 0.375) return { label: 'Fragile', color: COLORS.amber };              // 3-4/8
+  return { label: 'Non maîtrisé', color: COLORS.red };                                // 0-2/8
+}
+
+// ============ Format temps ============
+function formatDuration(totalSeconds: number): string {
+  if (!totalSeconds || totalSeconds < 0) return '—';
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  if (m === 0) return `${s} s`;
+  return `${m} min ${String(s).padStart(2, '0')} s`;
+}
+
+function formatDateFR(d: Date): string {
+  return d.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 }
 
 // ============ Styles ============
 const styles = StyleSheet.create({
   page: {
     backgroundColor: COLORS.bg,
-    padding: 44,
-    paddingTop: 32,
+    padding: 40,
+    paddingTop: 28,
     fontFamily: 'Helvetica',
     fontSize: 10,
     color: COLORS.ink,
   },
 
-  // ─── Header uniforme (identique aux autres PDFs) ───
+  // ─── Header uniforme ───
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 12,
+    paddingBottom: 10,
     borderBottomWidth: 0.6,
     borderBottomColor: COLORS.line,
-    marginBottom: 22,
+    marginBottom: 18,
   },
   logoWrap: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logoImg: { width: 34, height: 34, objectFit: 'contain' },
+  logoImg: { width: 30, height: 30, objectFit: 'contain' },
   logoKicker: {
     fontSize: 8,
     color: COLORS.accent,
@@ -125,338 +152,335 @@ const styles = StyleSheet.create({
   topMeta: {
     fontSize: 8,
     color: COLORS.muted,
-    letterSpacing: 1.2,
+    letterSpacing: 0.8,
+    textAlign: 'right',
   },
 
   // ─── Titre ───
-  titleBlock: { marginBottom: 20 },
+  titleBlock: { marginBottom: 14 },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontFamily: 'Times-Italic',
     color: COLORS.accent,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   identity: { fontSize: 10, color: COLORS.muted },
   identityBold: { fontFamily: 'Helvetica-Bold', color: COLORS.ink },
 
-  // ─── Bloc principal Score + Niveau ───
+  // ─── Bloc Score + Niveau ───
   mainRow: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 22,
+    gap: 12,
+    marginBottom: 16,
   },
-
-  // Score card (gauche)
   scoreCard: {
-    width: 220,
+    flex: 1,
     backgroundColor: COLORS.panel,
     borderWidth: 0.6,
     borderColor: COLORS.line,
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 8,
+    padding: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   scoreLabel: {
     fontSize: 8,
+    letterSpacing: 1.2,
     color: COLORS.muted,
-    letterSpacing: 1.4,
-    marginBottom: 10,
+    marginBottom: 4,
+    fontFamily: 'Helvetica-Bold',
   },
-  scoreValue: {
-    fontSize: 48,
+  scorePct: {
+    fontSize: 36,
     fontFamily: 'Times-Italic',
     color: COLORS.accent,
-    marginBottom: 4,
+    lineHeight: 1,
   },
-  scoreSub: { fontSize: 9, color: COLORS.muted },
-
-  // Niveau card (droite)
-  levelCard: {
-    flex: 1,
-    backgroundColor: COLORS.panelTint,
-    borderRadius: 12,
-    padding: 20,
-    justifyContent: 'center',
-  },
-  levelLabel: {
+  scoreHint: {
     fontSize: 8,
     color: COLORS.muted,
-    letterSpacing: 1.4,
-    marginBottom: 8,
-  },
-  levelBadge: {
-    fontSize: 44,
-    fontFamily: 'Times-Italic',
-    color: COLORS.accent,
-    marginBottom: 2,
-  },
-  levelName: {
-    fontSize: 16,
-    fontFamily: 'Times-Italic',
-    color: COLORS.ink,
-    marginBottom: 4,
-  },
-  levelTag: {
-    fontSize: 10,
-    color: COLORS.muted,
-    marginBottom: 12,
+    marginTop: 4,
   },
 
-  // CECRL bar
-  cecrlBar: { flexDirection: 'row', height: 6, marginBottom: 4 },
-  cecrlSeg: { flex: 1, backgroundColor: COLORS.lineSoft, marginRight: 2 },
-  cecrlSegLast: { marginRight: 0 },
-  cecrlSegActive: { backgroundColor: COLORS.accent },
-  cecrlLabelsRow: { flexDirection: 'row' },
+  levelCard: {
+    flex: 1.6,
+    backgroundColor: COLORS.panel,
+    borderWidth: 0.6,
+    borderColor: COLORS.line,
+    borderRadius: 8,
+    padding: 14,
+  },
+  levelHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    marginBottom: 6,
+  },
+  levelBig: {
+    fontSize: 28,
+    fontFamily: 'Times-Italic',
+    color: COLORS.accent,
+    lineHeight: 1,
+  },
+  levelLabel: {
+    fontSize: 11,
+    color: COLORS.ink,
+    fontFamily: 'Helvetica-Bold',
+  },
+  levelTag: {
+    fontSize: 9,
+    color: COLORS.muted,
+    marginBottom: 8,
+  },
+  cecrlBar: {
+    flexDirection: 'row',
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  cecrlSeg: {
+    flex: 1,
+    height: 5,
+    backgroundColor: COLORS.lineSoft,
+    marginRight: 3,
+    borderRadius: 2,
+  },
+  cecrlSegLast: {
+    marginRight: 0,
+  },
+  cecrlSegActive: {
+    backgroundColor: COLORS.accent,
+  },
+  cecrlLabelsRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
   cecrlLabelCell: {
     flex: 1,
     fontSize: 7,
     color: COLORS.muted,
-    letterSpacing: 1,
     textAlign: 'center',
-    marginRight: 2,
+    marginRight: 3,
+    letterSpacing: 0.4,
   },
   cecrlLabelActive: {
     color: COLORS.accent,
     fontFamily: 'Helvetica-Bold',
   },
-
-  // ─── Interprétation ───
   interpretation: {
-    fontSize: 10,
-    color: COLORS.muted,
-    lineHeight: 1.6,
-    marginBottom: 18,
-  },
-  interpretationLead: {
-    fontFamily: 'Helvetica-Bold',
-    color: COLORS.accent,
+    fontSize: 9,
+    color: COLORS.ink,
+    lineHeight: 1.4,
   },
 
-  // ─── Radar ───
-  radarCard: {
+  // ─── Radar section ───
+  radarSection: {
     backgroundColor: COLORS.panel,
     borderWidth: 0.6,
     borderColor: COLORS.line,
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
     alignItems: 'center',
   },
   radarTitle: {
-    fontSize: 14,
-    fontFamily: 'Times-Italic',
+    fontSize: 8,
+    letterSpacing: 1.2,
+    color: COLORS.muted,
+    marginBottom: 6,
+    fontFamily: 'Helvetica-Bold',
+    alignSelf: 'flex-start',
+  },
+  radarLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 14,
+    marginTop: 8,
+    flexWrap: 'wrap',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  legendDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  legendText: {
+    fontSize: 8,
+    color: COLORS.ink,
+  },
+
+  // ─── Préconisation ───
+  precoBox: {
+    backgroundColor: COLORS.panelTint,
+    borderWidth: 0.6,
+    borderColor: COLORS.line,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+  },
+  precoLabel: {
+    fontSize: 8,
+    letterSpacing: 1.2,
     color: COLORS.accent,
+    marginBottom: 4,
+    fontFamily: 'Helvetica-Bold',
+  },
+  precoText: {
+    fontSize: 9,
+    color: COLORS.ink,
+    lineHeight: 1.4,
+  },
+
+  // ─── Closing + Signature ───
+  closingText: {
+    fontSize: 8.5,
+    color: COLORS.muted,
+    lineHeight: 1.4,
+    fontStyle: 'italic',
+    textAlign: 'center',
     marginBottom: 8,
   },
-  radarSub: {
-    fontSize: 9,
-    color: COLORS.muted,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-
-  // ─── Section titre (page 2) ───
-  sectionTitle: {
-    fontSize: 22,
-    fontFamily: 'Times-Italic',
-    color: COLORS.accent,
-    marginBottom: 18,
-  },
-
-  // ─── Blocs ───
-  blockRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: COLORS.lineSoft,
-  },
-  blockNum: {
-    width: 26,
-    fontSize: 8,
-    color: COLORS.muted,
-    letterSpacing: 1,
-  },
-  blockLabel: {
-    flex: 1,
-    fontSize: 11,
-    color: COLORS.ink,
-  },
-  blockPct: {
-    width: 42,
-    fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
-    color: COLORS.ink,
-    textAlign: 'right',
-    marginRight: 12,
-  },
-  mentionWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    width: 130,
-    justifyContent: 'flex-end',
-  },
-  mentionDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  mentionText: {
-    fontSize: 10,
-    fontFamily: 'Helvetica-Bold',
-  },
-
-  // ─── Closing ───
-  closingBox: {
-    marginTop: 24,
-    padding: 18,
-    backgroundColor: COLORS.panelTint,
-    borderRadius: 10,
-  },
-  closingText: {
-    fontSize: 10,
-    color: COLORS.ink,
-    lineHeight: 1.6,
-    fontStyle: 'italic',
-  },
-
-  // ─── Signature ───
   signature: {
-    marginTop: 20,
+    borderTopWidth: 0.6,
+    borderTopColor: COLORS.line,
+    paddingTop: 8,
     alignItems: 'center',
   },
   signatureName: {
-    fontSize: 11,
-    fontFamily: 'Times-Italic',
-    color: COLORS.muted,
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
+    color: COLORS.ink,
   },
   signatureTitle: {
-    fontSize: 8,
+    fontSize: 7,
     color: COLORS.muted,
-    letterSpacing: 1.2,
+    letterSpacing: 1,
     marginTop: 2,
   },
 
   // ─── Footer ───
   footer: {
     position: 'absolute',
-    bottom: 24,
-    left: 44,
-    right: 44,
+    bottom: 20,
+    left: 40,
+    right: 40,
     flexDirection: 'row',
     justifyContent: 'space-between',
     fontSize: 7,
     color: COLORS.muted,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
 });
 
 // ============ Composant Radar ============
 function Radar({ blocks }: { blocks: BilanBlock[] }) {
-  const size = 300;
+  const size = 240;
   const cx = size / 2;
   const cy = size / 2;
-  const radius = 110;
+  const radius = 80;
+  const levels = [0.25, 0.5, 0.75, 1];
 
-  // 6 axes régulièrement espacés, sommet en haut
-  const angles = blocks.map((_, i) => (Math.PI * 2 * i) / blocks.length - Math.PI / 2);
-
-  const point = (r: number, angle: number) => ({
-    x: cx + Math.cos(angle) * r,
-    y: cy + Math.sin(angle) * r,
+  // Calcul des points pour chaque axe
+  const angleStep = (Math.PI * 2) / blocks.length;
+  const points = blocks.map((b, i) => {
+    const angle = -Math.PI / 2 + i * angleStep;
+    const x = cx + Math.cos(angle) * radius * b.score;
+    const y = cy + Math.sin(angle) * radius * b.score;
+    return { x, y, angle, block: b };
   });
 
-  // Grille de fond : 4 polygones concentriques (0.25, 0.5, 0.75, 1)
-  const gridLevels = [0.25, 0.5, 0.75, 1];
-  const gridPolygons = gridLevels.map((level) => {
-    const pts = angles.map((a) => point(radius * level, a));
-    return pts.map((p) => `${p.x},${p.y}`).join(' ');
+  // Points extérieurs (pour les labels)
+  const labelPoints = blocks.map((_, i) => {
+    const angle = -Math.PI / 2 + i * angleStep;
+    const labelR = radius + 18;
+    return {
+      x: cx + Math.cos(angle) * labelR,
+      y: cy + Math.sin(angle) * labelR,
+      angle,
+    };
   });
 
-  // Axes
-  const axes = angles.map((a) => point(radius, a));
-
-  // Zone de données
-  const dataPoints = blocks.map((b, i) => point(radius * Math.max(0.02, b.score), angles[i]));
-  const dataPolygon = dataPoints.map((p) => `${p.x},${p.y}`).join(' ');
-
-  // Labels
-  const labels = blocks.map((b, i) => {
-    const p = point(radius + 22, angles[i]);
-    return { text: b.label, x: p.x, y: p.y };
+  // Grille (polygones concentriques)
+  const gridPolygons = levels.map((lvl) => {
+    return blocks
+      .map((_, i) => {
+        const angle = -Math.PI / 2 + i * angleStep;
+        return `${cx + Math.cos(angle) * radius * lvl},${cy + Math.sin(angle) * radius * lvl}`;
+      })
+      .join(' ');
   });
+
+  const dataPolygon = points.map((p) => `${p.x},${p.y}`).join(' ');
 
   return (
-    <Svg width={size} height={size}>
+    <Svg width={size} height={size + 30}>
       {/* Grille */}
-      {gridPolygons.map((pts, idx) => (
+      {gridPolygons.map((poly, i) => (
         <Polygon
-  key={`grid-${idx}`}
-  points={pts}
-  fill="none"
-  stroke={COLORS.lineSoft}
-  strokeWidth={0.6}
-/>
-
-      ))}
-      {/* Axes */}
-      {axes.map((p, idx) => (
-        <Line
-          key={`axis-${idx}`}
-          x1={cx}
-          y1={cy}
-          x2={p.x}
-          y2={p.y}
+          key={i}
+          points={poly}
+          fill="none"
           stroke={COLORS.lineSoft}
-          strokeWidth={0.6}
+          strokeWidth={0.5}
         />
       ))}
-      {/* Zone données */}
+
+      {/* Axes */}
+      {blocks.map((_, i) => {
+        const angle = -Math.PI / 2 + i * angleStep;
+        return (
+          <Line
+            key={i}
+            x1={cx}
+            y1={cy}
+            x2={cx + Math.cos(angle) * radius}
+            y2={cy + Math.sin(angle) * radius}
+            stroke={COLORS.lineSoft}
+            strokeWidth={0.5}
+          />
+        );
+      })}
+
+      {/* Polygone données */}
       <Polygon
         points={dataPolygon}
-        fill={COLORS.accentSoft}
+        fill={COLORS.accent}
+        fillOpacity={0.12}
         stroke={COLORS.accent}
-        strokeWidth={1.5}
+        strokeWidth={1.2}
       />
-      {/* Points de données */}
-      {dataPoints.map((p, idx) => (
-        <Circle key={`pt-${idx}`} cx={p.x} cy={p.y} r={2.4} fill={COLORS.accent} />
-      ))}
-      {/* Labels */}
-      {labels.map((l, idx) => (
+
+      {/* Points colorés selon niveau */}
+      {points.map((p, i) => {
+        const mastery = scoreToMastery(p.block.score);
+        return (
+          <Circle
+            key={i}
+            cx={p.x}
+            cy={p.y}
+            r={4}
+            fill={mastery.color}
+            stroke={COLORS.panel}
+            strokeWidth={1.2}
+          />
+        );
+      })}
+
+      {/* Labels blocs */}
+      {labelPoints.map((lp, i) => (
         <Text
-          key={`lbl-${idx}`}
-          x={l.x}
-          y={l.y}
-          style={{
-            fontSize: 7.5,
-            fill: COLORS.muted,
-            textAnchor: 'middle',
-          }}
+          key={i}
+          x={lp.x}
+          y={lp.y}
+          style={{ fontSize: 7.5, fill: COLORS.muted, textAnchor: 'middle' }}
         >
-          {l.text}
+          {blocks[i].label}
         </Text>
       ))}
     </Svg>
-  );
-}
-
-// ============ Composant Header ============
-function Header({ data }: { data: BilanData; logo?: Uint8Array | Buffer }) {
-  const fullName = `${data.firstName} ${data.lastName}`.trim() || 'Participant';
-  return (
-    <View style={styles.topBar}>
-      <View style={styles.logoWrap}>
-        <Text style={styles.logoKicker}>
-          BILAN — {fullName.toUpperCase()} — {(data.organizationName || 'ORGANISATION').toUpperCase()}
-        </Text>
-      </View>
-      <Text style={styles.topMeta}>
-        {new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(data.completedAt)}
-      </Text>
-    </View>
   );
 }
 
@@ -466,139 +490,126 @@ export default function BilanParticipantPDF({
   logo,
 }: {
   data: BilanData;
-  logo?: Uint8Array | Buffer;
+  logo?: Buffer | string | null;
 }) {
-  const levelMeta = LEVEL_META[data.level] ?? LEVEL_META.A;
-  const scorePct = Math.round((data.scoreProcedural / 6) * 100);
-  const fullName = `${data.firstName} ${data.lastName}`.trim() || 'Participant';
+
+  const levelMeta = LEVEL_META[data.level];
+  const globalPct = Math.round((data.scoreProcedural / 6) * 100);
 
   return (
-    <Document
-      title={`Bilan ${fullName}`}
-      author="OHé Diag"
-      subject="Bilan de diagnostic orthographique"
-    >
-      {/* ═══════════════ PAGE 1 ═══════════════ */}
+    <Document>
       <Page size="A4" style={styles.page}>
-        <Header data={data} logo={logo} />
+        {/* Header */}
+        <View style={styles.topBar}>
+          <View style={styles.logoWrap}>
+            {logo && <Image src={logo} style={styles.logoImg} />}
+            <Text style={styles.logoKicker}>
+              BILAN — {data.firstName.toUpperCase()} {data.lastName.toUpperCase()} — {data.organizationName.toUpperCase()}
+            </Text>
+          </View>
+          <View>
+            <Text style={styles.topMeta}>
+              Complété le {formatDateFR(data.completedAt)}
+            </Text>
+            <Text style={styles.topMeta}>
+              Durée · {formatDuration(data.totalTimeSeconds)}
+            </Text>
+          </View>
+        </View>
 
-        {/* Titre + identité */}
+        {/* Titre */}
         <View style={styles.titleBlock}>
           <Text style={styles.title}>Bilan de diagnostic</Text>
           <Text style={styles.identity}>
-            <Text style={styles.identityBold}>{fullName}</Text>
-            {' · '}
-            {data.email}
-            {data.organizationName ? ` · ${data.organizationName}` : ''}
+            <Text style={styles.identityBold}>
+              {data.firstName} {data.lastName}
+            </Text>{' '}
+            · {data.email}
           </Text>
         </View>
 
-        {/* Bloc Score + Niveau */}
+        {/* Score + Niveau */}
         <View style={styles.mainRow}>
-          {/* Score global */}
           <View style={styles.scoreCard}>
             <Text style={styles.scoreLabel}>SCORE GLOBAL</Text>
-            <Text style={styles.scoreValue}>{scorePct} %</Text>
-            <Text style={styles.scoreSub}>
-              {data.correctTotal} bonnes réponses
-            </Text>
+            <Text style={styles.scorePct}>{globalPct} %</Text>
+            <Text style={styles.scoreHint}>bonnes réponses</Text>
           </View>
 
-          {/* Niveau CECRL */}
           <View style={styles.levelCard}>
-            <Text style={styles.levelLabel}>NIVEAU CECRL</Text>
-            <Text style={styles.levelBadge}>{data.level}</Text>
-            <Text style={styles.levelName}>{levelMeta.label}</Text>
+            <View style={styles.levelHeaderRow}>
+              <Text style={styles.levelBig}>{data.level}</Text>
+              <Text style={styles.levelLabel}>{levelMeta.label}</Text>
+            </View>
             <Text style={styles.levelTag}>{levelMeta.tagline}</Text>
 
-            {/* Barre CECRL 4 segments */}
             <View style={styles.cecrlBar}>
-  {LEVEL_ORDER.map((lvl, i) => (
-    <View
-      key={lvl}
-      style={[
-        styles.cecrlSeg,
-        i === LEVEL_ORDER.length - 1 ? styles.cecrlSegLast : {},
-        i <= levelMeta.index ? styles.cecrlSegActive : {},
-      ]}
-    />
-  ))}
-</View>
-
+              {LEVEL_ORDER.map((lvl, i) => (
+                <View
+                  key={lvl}
+                  style={[
+                    styles.cecrlSeg,
+                    i === LEVEL_ORDER.length - 1 ? styles.cecrlSegLast : {},
+                    i <= levelMeta.index ? styles.cecrlSegActive : {},
+                  ]}
+                />
+              ))}
+            </View>
             <View style={styles.cecrlLabelsRow}>
-  {LEVEL_ORDER.map((lvl, i) => (
-    <Text
-      key={lvl}
-      style={[
-        styles.cecrlLabelCell,
-        i === LEVEL_ORDER.length - 1 ? { marginRight: 0 } : {},
-        i === levelMeta.index ? styles.cecrlLabelActive : {},
-      ]}
-    >
-      {lvl}
-    </Text>
-  ))}
-</View>
+              {LEVEL_ORDER.map((lvl, i) => (
+                <Text
+                  key={lvl}
+                  style={[
+                    styles.cecrlLabelCell,
+                    i === LEVEL_ORDER.length - 1 ? { marginRight: 0 } : {},
+                    i === levelMeta.index ? styles.cecrlLabelActive : {},
+                  ]}
+                >
+                  {lvl}
+                </Text>
+              ))}
+            </View>
 
+            <Text style={styles.interpretation}>{levelMeta.interpretation}</Text>
           </View>
         </View>
 
-        {/* Interprétation */}
-        <Text style={styles.interpretation}>
-          <Text style={styles.interpretationLead}>Ce que cela signifie. </Text>
-          {levelMeta.interpretation}
-        </Text>
-
-        {/* Radar */}
-        <View style={styles.radarCard}>
-          <Text style={styles.radarTitle}>Profil de compétences</Text>
-          <Text style={styles.radarSub}>
-            Vos performances sur les six domaines évalués
-          </Text>
+        {/* Radar + Légende */}
+        <View style={styles.radarSection}>
+          <Text style={styles.radarTitle}>PROFIL DE COMPÉTENCES</Text>
           <Radar blocks={data.blocks} />
-        </View>
-
-        {/* Footer */}
-        <View style={styles.footer} fixed>
-          <Text>OHÉ · DOCUMENT CONFIDENTIEL · RÉF {data.reference}</Text>
-          <Text
-            render={({ pageNumber, totalPages }) => `P. ${pageNumber} / ${totalPages}`}
-          />
-        </View>
-      </Page>
-
-      {/* ═══════════════ PAGE 2 ═══════════════ */}
-      <Page size="A4" style={styles.page}>
-        <Header data={data} logo={logo} />
-
-        <Text style={styles.sectionTitle}>Vos six domaines évalués</Text>
-
-        {data.blocks.map((b, i) => {
-          const pct = Math.round(b.score * 100);
-          const mention = scoreToMention(b.score);
-          return (
-            <View key={i} style={styles.blockRow}>
-              <Text style={styles.blockNum}>{String(i + 1).padStart(2, '0')}</Text>
-              <Text style={styles.blockLabel}>{b.label}</Text>
-              <Text style={styles.blockPct}>{pct} %</Text>
-              <View style={styles.mentionWrap}>
-                <View style={[styles.mentionDot, { backgroundColor: mention.color }]} />
-                <Text style={[styles.mentionText, { color: mention.color }]}>
-                  {mention.label}
-                </Text>
-              </View>
+          <View style={styles.radarLegend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: COLORS.emerald }]} />
+              <Text style={styles.legendText}>Maîtrisé</Text>
             </View>
-          );
-        })}
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: COLORS.accentBlue }]} />
+              <Text style={styles.legendText}>En cours de maîtrise</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: COLORS.amber }]} />
+              <Text style={styles.legendText}>Fragile</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: COLORS.red }]} />
+              <Text style={styles.legendText}>Non maîtrisé</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Préconisation OHé */}
+        <View style={styles.precoBox}>
+          <Text style={styles.precoLabel}>PRÉCONISATION OHÉ</Text>
+          <Text style={styles.precoText}>{levelMeta.preconisation}</Text>
+        </View>
 
         {/* Closing */}
-        <View style={styles.closingBox}>
-          <Text style={styles.closingText}>
-            Ce bilan est une photographie de votre orthographe à l&apos;instant T.
-            L&apos;orthographe se travaille et se consolide : chaque effort compte,
-            et la progression est toujours possible, à tout âge et à tout niveau.
-          </Text>
-        </View>
+        <Text style={styles.closingText}>
+          Ce bilan est une photographie de votre orthographe à l&apos;instant T.
+          L&apos;orthographe se travaille et se consolide : chaque effort compte,
+          et la progression est toujours possible, à tout âge et à tout niveau.
+        </Text>
 
         {/* Signature */}
         <View style={styles.signature}>
@@ -609,9 +620,7 @@ export default function BilanParticipantPDF({
         {/* Footer */}
         <View style={styles.footer} fixed>
           <Text>OHÉ · DOCUMENT CONFIDENTIEL · RÉF {data.reference}</Text>
-          <Text
-            render={({ pageNumber, totalPages }) => `P. ${pageNumber} / ${totalPages}`}
-          />
+          <Text render={({ pageNumber, totalPages }) => `P. ${pageNumber} / ${totalPages}`} />
         </View>
       </Page>
     </Document>
