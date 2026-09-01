@@ -19,7 +19,6 @@ import {
 } from './table/userTableColumns';
 
 import { exportUsersToExcel } from '@/lib/exportToExcel';
-import { exportUsersToPdf } from '@/lib/exportToPdf';
 
 
 interface UsersPageContentProps {
@@ -45,6 +44,8 @@ export default function UsersPageContent({
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortState | null>(null);
+  const [isPdfLoading, setIsPdfLoading] = useState(false);
+
 
   const testCounts = useMemo(() => {
     const effective = users.map((u) => getEffectiveTestStatus(u));
@@ -156,13 +157,24 @@ export default function UsersPageContent({
       {/* Recherche + Filtre groupe + Export */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative flex-1 min-w-[240px] max-w-md">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ohe-slate-400 pointer-events-none"
-            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M21 21l-4.35-4.35M17 10a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          {isPdfLoading ? (
+  <>
+    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+    </svg>
+    Génération…
+  </>
+) : (
+  <>
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+    PDF
+  </>
+)}
+
           <input
             type="search"
             value={search}
@@ -225,23 +237,58 @@ export default function UsersPageContent({
           <button
             type="button"
             onClick={async () => {
-  const testLabels: Record<string, string> = {
-    all: '', pending: 'En attente', ready: 'Démarré', in_progress: 'En cours',
-    completed: 'Terminé', expired: 'Hors délais',
-  };
-  const groupLabel = groupFilter === 'all'
-    ? ''
-    : groupFilter === 'none'
-      ? 'Sans groupe'
-      : groups.find((g) => g.id === groupFilter)?.name ?? '';
-  await exportUsersToPdf(filteredUsers, orgName, {
-    status: testLabels[testFilter] || undefined,
-    group: groupLabel || undefined,
-    search: search || undefined,
-  });
+  if (isPdfLoading || filteredUsers.length === 0) return;
+  setIsPdfLoading(true);
+  try {
+    const testLabels: Record<string, string> = {
+      all: '', pending: 'En attente', ready: 'Démarré', in_progress: 'En cours',
+      completed: 'Terminé', expired: 'Hors délais',
+    };
+    const groupLabel = groupFilter === 'all'
+      ? ''
+      : groupFilter === 'none'
+        ? 'Sans groupe'
+        : groups.find((g) => g.id === groupFilter)?.name ?? '';
+
+    const res = await fetch('/api/pdf/collectif', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userIds: filteredUsers.map((u) => u.id),
+        filters: {
+          status: testLabels[testFilter] || undefined,
+          group: groupLabel || undefined,
+          search: search || undefined,
+        },
+      }),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text().catch(() => 'Erreur inconnue');
+      throw new Error(`Échec de la génération du PDF : ${errorText}`);
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const orgSlug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.download = `bilan-collectif-${orgSlug}-${dateStr}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+    alert(err instanceof Error ? err.message : 'Erreur lors de la génération du PDF');
+  } finally {
+    setIsPdfLoading(false);
+  }
 }}
 
-            disabled={filteredUsers.length === 0}
+
+disabled={filteredUsers.length === 0 || isPdfLoading}
             className="inline-flex items-center gap-2 px-3 py-1.5 border border-ohe-slate-200 rounded-lg bg-white text-sm font-medium text-ohe-slate-700 hover:border-ohe-slate-300 hover:bg-ohe-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Exporter la vue filtrée au format PDF"
           >
