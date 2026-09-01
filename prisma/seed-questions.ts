@@ -133,7 +133,7 @@ const bloc6 = [
   {
     source: 'Julie est arrivée à la gare à 8 h 05. Son train partait à 8 h 00.',
     q: 'On peut en déduire que Julie :',
-    opts: ['A probablement raté son train.', 'Est montée dans son train.', 'Est arrivée en avance.', 'Je ne sais pas.'],
+    opts: ['A raté son train.', 'Est montée dans son train.', 'Est arrivée en avance.', 'Je ne sais pas.'],
     correct: 0
   },
   {

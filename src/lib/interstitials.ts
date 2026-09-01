@@ -62,14 +62,15 @@ export const INTERSTITIALS: Record<number, InterstitialConfig | null> = {
     body: [
       "Vous allez découvrir plusieurs phrases. Vous devrez alors choisir celle qui est la mieux construite.",
     ],
-        example: {
-      label: 'Exemple',
-      items: [
-        { text: "Sophie est la personne à qui je pense.", highlight: 'correct', caption: 'construction correcte' },
-        { text: "Karim est la personne que je pense.", highlight: 'wrong', caption: 'construction incorrecte' },
-        { text: "Sophie est la personne dont je pense.", highlight: 'wrong', caption: 'construction incorrecte' },
-      ],
-    },
+       example: {
+  label: 'Exemple',
+  items: [
+    { text: "Karim est la personne à qui je pense.", highlight: 'correct', caption: 'construction correcte' },
+    { text: "Sophie est la personne que je pense.", highlight: 'wrong', caption: 'construction incorrecte' },
+    { text: "Karim est la personne dont je pense.", highlight: 'wrong', caption: 'construction incorrecte' },
+  ],
+},
+
 
     ctaLabel: 'Je suis prêt(e), continuer',
   },

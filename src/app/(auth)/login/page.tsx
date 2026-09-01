@@ -151,14 +151,15 @@ export default function LoginPage() {
           <Eyebrow tone="accent">Diagnostic</Eyebrow>
 
           <h2 className="mt-6 text-[32px] leading-[1.1] tracking-[-0.02em] font-normal text-balance">
-            Cartographiez le niveau en{" "}
-            <span className="font-serif italic text-ohe-accent">français</span>{" "}
-            de vos équipes
-          </h2>
+  Un diagnostic simple pour identifier les besoins en{" "}
+  <span className="font-serif italic text-ohe-accent">orthographe</span>{" "}
+  de vos équipes.
+</h2>
 
-          <p className="mt-5 text-[15px] leading-[1.55] text-ohe-muted text-pretty">
-            L&apos;espace administrateur vous permet d&apos;inviter vos participants, suivre leur progression et consulter les résultats détaillés — individuels et collectifs.
-          </p>
+<p className="mt-5 text-[15px] leading-[1.55] text-ohe-muted text-pretty">
+  L&apos;espace administrateur vous permet d&apos;inviter vos participants, suivre leur progression et consulter les résultats détaillés — individuels et collectifs.
+</p>
+
 
           <div className="mt-10 pt-6 border-t border-ohe-line flex items-center gap-3.5">
             <Portrait size={42} src="/img/logos/roxane.avif" alt="Roxane Joannidès" />

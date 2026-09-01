@@ -36,10 +36,11 @@ export default async function RulesPage() {
       body: 'Aucun retour en arrière une fois la réponse validée. Suivez vos intuitions.',
     },
     {
-      num: '03',
-      title: 'En une session',
-      body: 'À faire d\u2019une traite, sans interruption. Prévoyez environ 15 minutes.',
-    },
+  num: '03',
+  title: 'En une session',
+  body: 'À faire d\u2019une traite, sans interruption. ~15 minutes de test hors pause, sur l\u2019orthographe, la syntaxe et la compréhension.',
+},
+
   ];
 
   return (

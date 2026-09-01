@@ -73,7 +73,7 @@ export default async function WelcomePage() {
                 <h1 className="mt-4 text-[36px] sm:text-[46px] lg:text-[56px] leading-[1.02] tracking-[-0.028em] font-normal text-balance">
                   Bonjour {firstName},<br />
                   votre diagnostic<br />
-                  <span className="font-serif italic text-ohe-accent">arrive bientôt.</span>
+<span className="font-serif italic text-ohe-accent">démarre bientôt.</span>
                 </h1>
 
                 <p className="mt-5 max-w-[520px] text-base lg:text-[17px] leading-[1.55] text-ohe-muted text-pretty">
@@ -154,7 +154,7 @@ export default async function WelcomePage() {
                   <div className="text-[11px] tracking-[0.2em] text-ohe-accent pt-2 font-medium">01</div>
                   <div>
                     <div className="font-serif italic text-[22px] leading-[1.1] text-ohe-accent">~15 min</div>
-                    <div className="text-[13px] text-ohe-muted mt-1.5">durée moyenne</div>
+<div className="text-[13px] text-ohe-muted mt-1.5">durée du test</div>
                   </div>
                 </div>
 
