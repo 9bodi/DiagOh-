@@ -37,11 +37,9 @@
 /* === Utilitaires custom === */
 @layer utilities {
   .ohe-eyebrow {
-    font-size: 11px;
-    letter-spacing: 0.32em;
-    text-transform: uppercase;
-    font-weight: 500;
-  }
+  display: none;
+}
+
 
   .ohe-caption {
     font-size: 10px;

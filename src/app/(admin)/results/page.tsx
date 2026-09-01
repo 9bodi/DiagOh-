@@ -123,7 +123,7 @@ export default async function ResultsPage() {
 
   const total = completedSessions.length;
 
-  // ===== Répartition CECRL =====
+  // ===== Répartition par niveau =====
   const levelCounts = { A: 0, B1: 0, B2: 0, C: 0 } as Record<string, number>;
   completedSessions.forEach(s => { if (s.level) levelCounts[s.level]++; });
 
@@ -173,7 +173,7 @@ export default async function ResultsPage() {
         {/* Hero */}
         <div className="mb-10">
           <p className="font-mono text-[11px] tracking-[0.16em] uppercase text-ohe-orange mb-4">
-            ✱ Restitution
+            Restitution
           </p>
           <h1 className="font-serif font-normal text-4xl lg:text-[48px] leading-[1.05] tracking-tight text-ohe-slate-900">
             Restitution <em className="italic text-ohe-blue">collective.</em>

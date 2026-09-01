@@ -160,7 +160,7 @@ const admins = isSupervisor
           <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 mb-7">
             <div>
               <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
-                ✱ Inviter
+                Inviter
               </p>
               <h2 className="font-serif text-2xl lg:text-[28px] tracking-tight leading-tight text-ohe-slate-900">
                 Ajoutez un nouveau <em className="italic text-ohe-blue">participant.</em>

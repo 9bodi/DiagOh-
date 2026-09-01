@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     lineHeight: 1.5,
   },
 
-  // Histogramme bâton CECRL
+  // Histogramme bâton niveau
   histoWrap: { marginTop: 4, marginBottom: 14 },
   histoRow: {
     flexDirection: 'row',
@@ -731,7 +731,7 @@ export default function BilanClientPDF({ data, logo }: { data: BilanData; logo?:
   const recoLabel = recoKey ? RECO_META[recoKey].label : '—';
   const nextStepText = NEXT_STEP_TEXT[data.level] ?? NEXT_STEP_TEXT.A;
 
-  // Histogramme CECRL — 4 barres verticales fixes, active en navy
+  // Histogramme niveau — 4 barres verticales fixes, active en navy
   const histoData = LEVELS.map(lv => ({
     level: lv,
     active: lv === data.level,

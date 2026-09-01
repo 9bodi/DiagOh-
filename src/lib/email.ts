@@ -2,7 +2,7 @@ import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.EMAIL_FROM || 'OHé Diagnostic <onboarding@resend.dev>';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://diag-oh.vercel.app';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://diag.ohe-orthographe.fr';
 
 // ============================================================================
 // PALETTE — Alignée sur globals.css (charte OHé)
@@ -449,7 +449,7 @@ export async function sendResultsAvailableEmail({
       Bravo, vous avez terminé votre diagnostic d'orthographe. Vos résultats détaillés sont désormais disponibles sur votre espace personnel.
     </p>
     <p style="margin:0 0 32px; color:${COLORS.ink}; font-size:15px; line-height:1.6;">
-      Vous pourrez y consulter votre score, votre niveau CECRL, l'analyse détaillée par bloc de compétence, et télécharger votre bilan complet en PDF ainsi que votre badge de certification.
+      Vous pourrez y consulter votre score, votre niveau global, l'analyse détaillée par bloc de compétence, et télécharger votre bilan complet en PDF ainsi que votre badge de certification.
     </p>
     ${renderButton(resultsUrl, 'Voir mes résultats →')}
     <p style="margin:32px 0 0; color:${COLORS.muted}; font-size:13px; line-height:1.6; text-align:center;">
@@ -509,7 +509,7 @@ export async function sendAdminCompletionEmail({
         <tr>
           <td style="padding:16px 20px;">
             <p style="margin:0; color:${COLORS.muted}; font-size:11px; text-transform:uppercase; letter-spacing:0.08em; font-weight:600;">
-              Niveau CECRL atteint
+              Niveau global atteint
             </p>
             <p style="margin:6px 0 0; color:${COLORS.accent}; font-size:22px; font-weight:700;">
               ${cecrlLevel}

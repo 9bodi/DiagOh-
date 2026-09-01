@@ -109,7 +109,7 @@ export function exportUsersToExcel(users: ExportUserRow[], orgName: string) {
     'Activé le',
     'Deadline',
     'Terminé le',
-    'Niveau CECRL',
+    'Niveau global',
     'Score global',
     `Bloc 1 — ${BLOCK_LABELS[1]}`,
     `Bloc 2 — ${BLOCK_LABELS[2]}`,
@@ -313,7 +313,7 @@ export function exportUsersToExcel(users: ExportUserRow[], orgName: string) {
     ['Expiré', statusCounts.EXPIRED],
     ['', ''],
 
-    ['RÉPARTITION PAR NIVEAU CECRL (terminés)', ''],
+    ['RÉPARTITION PAR NIVEAU (terminés)', ''],
     ['A', levelCounts.A],
     ['B1', levelCounts.B1],
     ['B2', levelCounts.B2],

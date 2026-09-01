@@ -110,7 +110,7 @@ export default function CreateSupervisorModal({
         {!magicLink ? (
           <>
             <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
-              ✱ Nouveau référent
+              Nouveau référent
             </p>
             <h3 className="font-serif text-2xl text-ohe-slate-900 mb-3 leading-snug">
               Ajouter un référent

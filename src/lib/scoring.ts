@@ -17,7 +17,7 @@ function bloсScore(correctCount: number): number {
 }
 
 /**
- * Convertit le score global procédural (/6) en niveau CECRL adapté.
+ * Convertit le score global procédural (/6) en niveau adapté.
  *   0    – 2.5 → A   (élémentaire)
  *   2.5  – 3.5 → B1  (intermédiaire)
  *   3.5  – 4.5 → B2  (avancé)
@@ -51,7 +51,7 @@ function computeQuadrant(scoreAdaptation: number, scoreInteret: number): number 
  * Calcule tous les scores d'une session selon le CDC v3 :
  *   - Score par bloc (0 / 0.5 / 0.75 / 1) pour les blocs 1 à 6
  *   - Score global procédural (somme des 6 blocs, /6)
- *   - Niveau CECRL (A / B1 / B2 / C)
+ *   - Niveau (A / B1 / B2 / C)
  *   - Score Adaptation (/5) + Score Intérêt (/5) pour le bloc 7
  *   - Quadrant (1 à 4)
  */
@@ -73,7 +73,7 @@ export const RECOMMANDATION_LABELS: Record<Recommandation, string> = {
 };
 
 /**
- * Calcule la préconisation finale en croisant le niveau CECRL et le quadrant.
+ * Calcule la préconisation finale en croisant le niveau et le quadrant.
  *
  * Règles (Roxane) :
  *  - B1/B2 + Besoin perçu + Disposé            → À former
@@ -142,7 +142,7 @@ export async function computeAndSaveScores(sessionId: string) {
   const scoreProcedural =
     scoreBloc1 + scoreBloc2 + scoreBloc3 + scoreBloc4 + scoreBloc5 + scoreBloc6;
 
-  // Niveau CECRL
+  // Niveau
   const level = scoreToLevel(scoreProcedural);
 
   // ============ PARTIE 2 : Bloc déclaratif (axes Adaptation / Intérêt) ============
@@ -167,7 +167,7 @@ export async function computeAndSaveScores(sessionId: string) {
  // Quadrant
   const quadrant = computeQuadrant(scoreAdaptation, scoreInteret);
 
-  // Préconisation finale (niveau CECRL × quadrant)
+  // Préconisation finale (niveau × quadrant)
   const recommandation = computeRecommandation(level, quadrant);
 
   // Sauvegarde en DB

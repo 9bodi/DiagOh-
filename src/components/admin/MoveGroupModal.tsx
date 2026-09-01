@@ -109,7 +109,7 @@ export default function MoveGroupModal({
     <div className="fixed inset-0 bg-ohe-slate-900/50 backdrop-blur-sm flex items-center justify-center p-6 z-50">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
         <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
-          ✱ Groupe du participant
+          Groupe du participant
         </p>
         <h3 className="font-serif text-2xl text-ohe-slate-900 mb-3 leading-snug">
           {userName}

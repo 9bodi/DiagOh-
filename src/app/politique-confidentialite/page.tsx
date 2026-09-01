@@ -30,7 +30,7 @@ export default function PolitiqueConfidentialitePage() {
         <ul>
           <li><strong>Données d&apos;identification</strong> : prénom, nom, adresse email professionnelle ;</li>
           <li><strong>Données de connexion</strong> : mot de passe (stocké sous forme hashée avec bcrypt), dates de connexion ;</li>
-          <li><strong>Données du diagnostic</strong> : réponses aux 48 questions, temps de réponse par question, scores calculés par bloc, niveau CECRL évalué, positionnement sur les axes adaptation/intérêt ;</li>
+          <li><strong>Données du diagnostic</strong> : réponses aux 48 questions, temps de réponse par question, scores calculés par bloc, niveau global évalué, positionnement sur les axes adaptation/intérêt ;</li>
           <li><strong>Rattachement organisationnel</strong> : entreprise cliente, groupe éventuel.</li>
         </ul>
         <p>

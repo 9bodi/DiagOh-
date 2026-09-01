@@ -122,7 +122,7 @@ export async function GET(
               display: 'flex',
             }}
           >
-            ✱ Certification
+            Certification
           </div>
         </div>
 

@@ -37,7 +37,7 @@ export default function CGUPage() {
         <h2>4. Fonctionnalités principales</h2>
         <ul>
           <li>Passage d&apos;un diagnostic d&apos;orthographe professionnelle chronométré ;</li>
-          <li>Consultation des résultats individuels (niveau CECRL, scores par compétence, profil déclaratif) ;</li>
+          <li>Consultation des résultats individuels (niveau global, scores par compétence, profil déclaratif) ;</li>
           <li>Téléchargement du bilan au format PDF ;</li>
           <li>Téléchargement d&apos;un badge de complétion partageable ;</li>
           <li>Pour les administrateurs : gestion des participants, consultation des résultats, extractions.</li>

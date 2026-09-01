@@ -109,7 +109,7 @@ export default function ActivateTestsModal({
         ) : (
           <>
             <p className="font-mono text-[11px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
-              ✱ Démarrer le test
+              Démarrer le test
             </p>
             <h2 className="font-serif text-2xl text-ohe-slate-900 mb-2">
               Activer {userCount} diagnostic{userCount > 1 ? 's' : ''}

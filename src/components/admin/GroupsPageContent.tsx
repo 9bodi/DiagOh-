@@ -155,7 +155,7 @@ function CreateGroupModal({ onClose, onSuccess }: { onClose: () => void; onSucce
 
   return (
     <Modal>
-      <ModalKicker>✱ Nouveau groupe</ModalKicker>
+      <ModalKicker>Nouveau groupe</ModalKicker>
       <ModalTitle>Créer un groupe</ModalTitle>
       <label htmlFor="new-group-name" className="block text-xs font-mono uppercase tracking-[0.12em] text-ohe-slate-700 mb-2">
         Nom du groupe
@@ -227,7 +227,7 @@ function RenameGroupModal({
 
   return (
     <Modal>
-      <ModalKicker>✱ Renommer</ModalKicker>
+      <ModalKicker>Renommer</ModalKicker>
       <ModalTitle>{group.name}</ModalTitle>
       <label htmlFor="rename-group" className="block text-xs font-mono uppercase tracking-[0.12em] text-ohe-slate-700 mb-2">
         Nouveau nom
@@ -304,7 +304,7 @@ function DeleteGroupModal({
 
   return (
     <Modal>
-      <ModalKicker>✱ Action définitive</ModalKicker>
+      <ModalKicker>Action définitive</ModalKicker>
       <ModalTitle>Supprimer {group.name} ?</ModalTitle>
       <p className="text-sm text-ohe-slate-600 leading-relaxed mb-4">
         Cette action est <strong className="text-ohe-slate-900">définitive</strong>. Les participants du groupe seront <strong>détachés</strong> (leur compte et leurs résultats sont conservés).

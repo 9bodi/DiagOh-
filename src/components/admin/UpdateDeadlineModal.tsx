@@ -81,7 +81,7 @@ export default function UpdateDeadlineModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ohe-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
         <p className="font-mono text-[11px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
-          ✱ Modifier la deadline
+          Modifier la deadline
         </p>
         <h2 className="font-serif text-2xl text-ohe-slate-900 mb-2">
           {userName}

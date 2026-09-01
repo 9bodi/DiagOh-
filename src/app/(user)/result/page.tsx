@@ -71,7 +71,7 @@ export default async function ResultPage() {
         {/* Niveau global + Score */}
         <section className="mb-20 grid md:grid-cols-2 gap-8">
           <div className="border border-ohe-line rounded-3xl p-10 bg-white">
-            <Eyebrow tone="muted">Niveau CECRL</Eyebrow>
+            <Eyebrow tone="muted">Niveau global</Eyebrow>
             <div
               className="text-8xl text-ohe-accent mt-4 mb-2"
               style={{ fontFamily: 'var(--font-instrument-serif)', fontStyle: 'italic' }}

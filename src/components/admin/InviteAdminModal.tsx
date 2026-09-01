@@ -73,7 +73,7 @@ export default function InviteAdminModal({
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
         <div className="mb-6">
           <p className="font-mono text-[10.5px] tracking-[0.16em] uppercase text-ohe-orange mb-3">
-            ✱ Nouvel administrateur
+            Nouvel administrateur
           </p>
           <h2 className="font-serif text-2xl tracking-tight text-ohe-slate-900">
             Inviter un <em className="italic text-ohe-blue">administrateur.</em>

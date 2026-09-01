@@ -148,7 +148,7 @@ export default function UserActions({
       {/* Modal Reset */}
       {resetModalOpen && (
         <Modal>
-          <ModalKicker>✱ Confirmation requise</ModalKicker>
+          <ModalKicker>Confirmation requise</ModalKicker>
           <ModalTitle>Réinitialiser le test de {userName} ?</ModalTitle>
 
           {isCompletedReset ? (
@@ -191,7 +191,7 @@ export default function UserActions({
       {/* Modal Delete */}
       {deleteModalOpen && (
         <Modal>
-          <ModalKicker>✱ Action définitive</ModalKicker>
+          <ModalKicker>Action définitive</ModalKicker>
           <ModalTitle>Supprimer {userName} ?</ModalTitle>
 
           <p className="text-sm text-ohe-slate-600 leading-relaxed mb-4">

@@ -50,7 +50,7 @@ const COLORS = {
   red: '#DC2626',        // Non maîtrisé
 };
 
-// ============ Niveaux (sans mention CECRL) ============
+// ============ Niveaux ============
 const LEVEL_META: Record<
   BilanData['level'],
   { label: string; tagline: string; index: number; interpretation: string; preconisation: string }

@@ -4,7 +4,7 @@ import { sendPasswordResetEmail } from '@/lib/email';
 import crypto from 'crypto';
 import { z } from 'zod';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://diag-oh.vercel.app';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://diag.ohe-orthographe.fr';
 
 const schema = z.object({
   email: z.string().email(),

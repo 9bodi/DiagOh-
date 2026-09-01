@@ -6,7 +6,7 @@ import { getActiveSession } from '@/lib/test-session';
 import { computeAndSaveScores } from '@/lib/scoring';
 import { sendResultsAvailableEmail } from '@/lib/email';
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://diag-oh.vercel.app';
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://diag.ohe-orthographe.fr';
 
 export async function POST() {
   const session = await auth();
