@@ -265,10 +265,10 @@ function renderCell(key: ColumnKey, u: UserRow, ctx: CellContext) {
 
     case 'score':
       return u.score !== null ? (
-        <span className="font-mono text-sm font-semibold text-ohe-slate-900">
-          {u.score.toFixed(2).replace('.', ',')}
-          <span className="text-ohe-slate-400 font-normal"> / 6</span>
+                <span className="font-mono text-sm font-semibold text-ohe-slate-900">
+          {Math.round((u.score / 6) * 100)} %
         </span>
+
       ) : (
         <span className="text-sm text-ohe-slate-300">—</span>
       );

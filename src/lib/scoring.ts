@@ -26,7 +26,7 @@ function bloсScore(correctCount: number): number {
 function scoreToLevel(scoreTotal: number): Level {
   if (scoreTotal < 2.5) return Level.A;
   if (scoreTotal < 3.5) return Level.B1;
-  if (scoreTotal < 4.5) return Level.B2;
+  if (scoreTotal < 5.1) return Level.B2;
   return Level.C;
 }
 
