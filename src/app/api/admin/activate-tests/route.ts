@@ -157,7 +157,7 @@ export async function POST(request: Request) {
       console.error(`❌ Send failed to ${u.email}:`, err);
       emailErrors.push({ email: u.email, error: String(err) });
     }
-    await sleep(600);
+    await sleep(200);
   }
 
   return NextResponse.json({

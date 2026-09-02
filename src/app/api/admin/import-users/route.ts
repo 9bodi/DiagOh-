@@ -348,7 +348,7 @@ export async function POST(request: Request) {
       console.error(`❌ Import — Envoi échoué à ${email}:`, err);
       emailErrors.push({ email, error: String(err) });
     }
-    await sleep(600);
+    await sleep(200);
   }
 
   // ===== Étape 7 : rapport final =====
