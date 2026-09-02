@@ -4,12 +4,9 @@ import {
   Text,
   View,
   StyleSheet,
-  Svg,
-  Polygon,
-  Line,
-  Circle,
   Image,
 } from '@react-pdf/renderer';
+import { SharedRadar } from './SharedRadar';
 
 // ============ Types exportés ============
 export interface BilanBlock {
@@ -44,7 +41,7 @@ const COLORS = {
   accentSoft: '#DDE3F2',
   line: '#D4D9E2',
   lineSoft: '#E6EAF2',
-  emerald: '#10B981',   // Maîtrisé
+  emerald: '#10B981',    // Maîtrisé
   accentBlue: '#1E3A8A', // En cours de maîtrise
   amber: '#F59E0B',      // Fragile
   red: '#DC2626',        // Non maîtrisé
@@ -97,10 +94,10 @@ const LEVEL_ORDER: BilanData['level'][] = ['A', 'B1', 'B2', 'C'];
 
 // ============ Niveau de maîtrise par bloc (4 seuils Roxane) ============
 function scoreToMastery(score: number): { label: string; color: string } {
-  if (score >= 0.875) return { label: 'Maîtrisé', color: COLORS.emerald };           // 7-8/8
-  if (score >= 0.625) return { label: 'En cours de maîtrise', color: COLORS.accentBlue }; // 5-6/8
-  if (score >= 0.375) return { label: 'Fragile', color: COLORS.amber };              // 3-4/8
-  return { label: 'Non maîtrisé', color: COLORS.red };                                // 0-2/8
+  if (score >= 0.875) return { label: 'Maîtrisé', color: COLORS.emerald };
+  if (score >= 0.625) return { label: 'En cours de maîtrise', color: COLORS.accentBlue };
+  if (score >= 0.375) return { label: 'Fragile', color: COLORS.amber };
+  return { label: 'Non maîtrisé', color: COLORS.red };
 }
 
 // ============ Format temps ============
@@ -375,115 +372,6 @@ const styles = StyleSheet.create({
   },
 });
 
-// ============ Composant Radar ============
-function Radar({ blocks }: { blocks: BilanBlock[] }) {
-  const size = 240;
-  const cx = size / 2;
-  const cy = size / 2;
-  const radius = 80;
-  const levels = [0.25, 0.5, 0.75, 1];
-
-  // Calcul des points pour chaque axe
-  const angleStep = (Math.PI * 2) / blocks.length;
-  const points = blocks.map((b, i) => {
-    const angle = -Math.PI / 2 + i * angleStep;
-    const x = cx + Math.cos(angle) * radius * b.score;
-    const y = cy + Math.sin(angle) * radius * b.score;
-    return { x, y, angle, block: b };
-  });
-
-  // Points extérieurs (pour les labels)
-  const labelPoints = blocks.map((_, i) => {
-    const angle = -Math.PI / 2 + i * angleStep;
-    const labelR = radius + 18;
-    return {
-      x: cx + Math.cos(angle) * labelR,
-      y: cy + Math.sin(angle) * labelR,
-      angle,
-    };
-  });
-
-  // Grille (polygones concentriques)
-  const gridPolygons = levels.map((lvl) => {
-    return blocks
-      .map((_, i) => {
-        const angle = -Math.PI / 2 + i * angleStep;
-        return `${cx + Math.cos(angle) * radius * lvl},${cy + Math.sin(angle) * radius * lvl}`;
-      })
-      .join(' ');
-  });
-
-  const dataPolygon = points.map((p) => `${p.x},${p.y}`).join(' ');
-
-  return (
-    <Svg width={size} height={size + 30}>
-      {/* Grille */}
-      {gridPolygons.map((poly, i) => (
-        <Polygon
-          key={i}
-          points={poly}
-          fill="none"
-          stroke={COLORS.lineSoft}
-          strokeWidth={0.5}
-        />
-      ))}
-
-      {/* Axes */}
-      {blocks.map((_, i) => {
-        const angle = -Math.PI / 2 + i * angleStep;
-        return (
-          <Line
-            key={i}
-            x1={cx}
-            y1={cy}
-            x2={cx + Math.cos(angle) * radius}
-            y2={cy + Math.sin(angle) * radius}
-            stroke={COLORS.lineSoft}
-            strokeWidth={0.5}
-          />
-        );
-      })}
-
-      {/* Polygone données */}
-      <Polygon
-        points={dataPolygon}
-        fill={COLORS.accent}
-        fillOpacity={0.12}
-        stroke={COLORS.accent}
-        strokeWidth={1.2}
-      />
-
-      {/* Points colorés selon niveau */}
-      {points.map((p, i) => {
-        const mastery = scoreToMastery(p.block.score);
-        return (
-          <Circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={4}
-            fill={mastery.color}
-            stroke={COLORS.panel}
-            strokeWidth={1.2}
-          />
-        );
-      })}
-
-      {/* Labels blocs */}
-      {labelPoints.map((lp, i) => (
-        <Text
-          key={i}
-          x={lp.x}
-          y={lp.y}
-          style={{ fontSize: 7.5, fill: COLORS.muted, textAnchor: 'middle' }}
-        >
-          {blocks[i].label}
-        </Text>
-      ))}
-    </Svg>
-  );
-}
-
 // ============ Composant principal ============
 export default function BilanParticipantPDF({
   data,
@@ -492,7 +380,6 @@ export default function BilanParticipantPDF({
   data: BilanData;
   logo?: Buffer | string | null;
 }) {
-
   const levelMeta = LEVEL_META[data.level];
   const globalPct = Math.round((data.scoreProcedural / 6) * 100);
 
@@ -577,7 +464,18 @@ export default function BilanParticipantPDF({
         {/* Radar + Légende */}
         <View style={styles.radarSection}>
           <Text style={styles.radarTitle}>PROFIL DE COMPÉTENCES</Text>
-          <Radar blocks={data.blocks} />
+          <SharedRadar
+            blocks={data.blocks.map(b => ({ label: b.label, score: b.score }))}
+            colors={{
+              accent: COLORS.accent,
+              panel: COLORS.panel,
+              lineSoft: COLORS.lineSoft,
+              ink: COLORS.ink,
+              muted: COLORS.muted,
+            }}
+            masteryColor={(score) => scoreToMastery(score).color}
+            showPercent
+          />
           <View style={styles.radarLegend}>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: COLORS.emerald }]} />

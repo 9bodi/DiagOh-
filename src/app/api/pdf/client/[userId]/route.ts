@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { renderToBuffer } from '@react-pdf/renderer';
-import BilanClientPDF, {
-  BilanData,
-  BilanBlock,
-} from '@/lib/pdf/BilanClientPDF';
+import BilanAdminIndividuelPDF, {
+  AdminIndivData,
+  AdminIndivBlock,
+} from '@/lib/pdf/BilanAdminIndividuelPDF';
 import React from 'react';
 import fs from 'fs';
 import path from 'path';
@@ -16,7 +16,7 @@ const BLOCK_LABELS: Record<number, string> = {
   3: 'Participe passé',
   4: 'Orthographe lexicale',
   5: 'Syntaxe',
-  6: 'Compréhension écrite',
+  6: 'Compréhension',
 };
 
 export async function GET(
@@ -34,6 +34,7 @@ export async function GET(
     where: { id: userId },
     include: {
       organization: true,
+      group: true,
       testSessions: {
         where: { status: 'COMPLETED' },
         orderBy: { createdAt: 'desc' },
@@ -47,7 +48,7 @@ export async function GET(
   }
 
   const isAdminSameOrg =
-    session.user.role === 'ADMIN' &&
+    (session.user.role === 'ADMIN' || session.user.role === 'SUPERVISOR') &&
     session.user.organizationId === targetUser.organizationId;
   const isSuperadmin = session.user.role === 'SUPERADMIN';
 
@@ -71,14 +72,11 @@ export async function GET(
   const proceduralAnswers = answers.filter(a => a.question.type === 'PROCEDURAL');
   const correctTotal = proceduralAnswers.filter(a => a.isCorrect).length;
 
-  // Temps moyen par question (toutes réponses, en secondes)
-  const answersWithTime = answers.filter(a => a.timeSpent != null && a.timeSpent > 0);
-  const avgTimePerQuestion = answersWithTime.length > 0
-    ? answersWithTime.reduce((sum, a) => sum + (a.timeSpent ?? 0), 0) / answersWithTime.length
-    : null;
-  const totalTimeSeconds = answersWithTime.reduce((sum, a) => sum + (a.timeSpent ?? 0), 0);
+  const totalTimeSeconds = answers
+    .filter(a => a.timeSpent != null && a.timeSpent > 0)
+    .reduce((sum, a) => sum + (a.timeSpent ?? 0), 0);
 
-  const blocks: BilanBlock[] = [];
+  const blocks: AdminIndivBlock[] = [];
   for (let blockNum = 1; blockNum <= 6; blockNum++) {
     const blockAnswers = proceduralAnswers.filter(
       a => a.question.blockNumber === blockNum
@@ -102,34 +100,31 @@ export async function GET(
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const s = lastSession as any;
-  const data: BilanData = {
+  const data: AdminIndivData = {
     firstName: targetUser.firstName ?? '',
     lastName: targetUser.lastName ?? '',
     email: targetUser.email,
     organizationName: targetUser.organization?.name ?? 'Organisation',
+    groupName: targetUser.group?.name ?? null,
     completedAt: lastSession.completedAt,
-    level: (lastSession.level ?? 'A') as 'A' | 'B1' | 'B2' | 'C',
+    reference,
     scoreProcedural: lastSession.scoreProcedural ?? 0,
     correctTotal,
+    level: (lastSession.level ?? 'A') as 'A' | 'B1' | 'B2' | 'C',
+    totalTimeSeconds: Math.round(totalTimeSeconds),
     blocks,
     quadrant: (s.quadrant ?? 3) as 1 | 2 | 3 | 4,
-    scoreAdaptation: s.scoreAdaptation ?? 0,
-    scoreInteret: s.scoreInteret ?? 0,
-    recommandation: s.recommandation ?? null,
-    avgTimePerQuestion,
-    totalTimeSeconds,
-    reference,
+    recommandation: (s.recommandation ?? null) as AdminIndivData['recommandation'],
   };
 
   const logoPath = path.join(process.cwd(), 'public', 'img', 'logos', 'ohe-logo.png');
   const logo = fs.existsSync(logoPath) ? fs.readFileSync(logoPath) : undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const element = React.createElement(BilanClientPDF, { data, logo }) as any;
-
+  const element = React.createElement(BilanAdminIndividuelPDF, { data, logo }) as any;
   const buffer = await renderToBuffer(element);
 
-  const filename = `bilan-client-${targetUser.lastName ?? 'user'}-${targetUser.firstName ?? ''}.pdf`
+  const filename = `bilan-individuel-${targetUser.lastName ?? 'user'}-${targetUser.firstName ?? ''}.pdf`
     .toLowerCase()
     .replace(/\s+/g, '-');
 

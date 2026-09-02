@@ -9,49 +9,39 @@ import {
 import { SharedRadar } from './SharedRadar';
 
 // ============ Types ============
-export interface CollectifBlockAvg {
+export interface AdminIndivBlock {
   label: string;
-  avgScore: number; // 0 → 1
+  score: number;      // 0..1
+  correctCount: number;
 }
 
-export interface CollectifLevelCount {
-  level: 'A' | 'B1' | 'B2' | 'C';
-  count: number;
-  pct: number; // 0 → 100
-}
-
-export interface CollectifQuadrantCount {
-  quadrant: 1 | 2 | 3 | 4;
-  count: number;
-  pct: number;
-}
-
-export interface CollectifRecoCount {
-  key: 'A_FORMER' | 'A_FORMER_ET_ACCOMPAGNER' | 'A_FORMER_SOUS_RESERVES' | 'A_ORIENTER';
-  count: number;
-  pct: number;
-}
-
-export interface CollectifData {
+export interface AdminIndivData {
+  // Identité
+  firstName: string;
+  lastName: string;
+  email: string;
   organizationName: string;
-  generatedAt: Date;
-  totalParticipants: number;
-  completedCount: number;
-  avgGlobalScore: number;
-  dominantLevel: 'A' | 'B1' | 'B2' | 'C' | null;
-  avgTimeSeconds: number;
-  blocks: CollectifBlockAvg[];
-  levels: CollectifLevelCount[];
-  quadrants: CollectifQuadrantCount[];
-  recos: CollectifRecoCount[];
-  filters: {
-    status?: string;
-    group?: string;
-    search?: string;
-  };
+  groupName?: string | null;
+  completedAt: Date;
+  reference: string;
+
+  // KPIs
+  scoreProcedural: number;        // /6
+  correctTotal: number;           // /48
+  level: 'A' | 'B1' | 'B2' | 'C';
+  totalTimeSeconds: number;
+
+  // Radar
+  blocks: AdminIndivBlock[];      // 6 blocs
+
+  // Déclarations
+  quadrant: 1 | 2 | 3 | 4;
+
+  // Recommandation
+  recommandation: 'A_FORMER' | 'A_FORMER_ET_ACCOMPAGNER' | 'A_FORMER_SOUS_RESERVES' | 'A_ORIENTER' | null;
 }
 
-// ============ Palette ============
+// ============ Palette (identique au collectif) ============
 const COLORS = {
   bg: '#F4F6FB',
   panel: '#FFFFFF',
@@ -68,7 +58,7 @@ const COLORS = {
   neutral: '#94A3B8',
 };
 
-// ============ Niveaux ============
+// ============ Niveaux (identique au collectif) ============
 const LEVEL_META: Record<
   'A' | 'B1' | 'B2' | 'C',
   { name: string; color: string; desc: string }
@@ -80,9 +70,9 @@ const LEVEL_META: Record<
 };
 
 const QUADRANT_META: Record<number, { label: string; muted: boolean }> = {
-  1: { label: 'Besoin perçu · Disposé',            muted: false },
-  2: { label: 'Besoin perçu · Moins disposé',      muted: false },
-  3: { label: 'Pas de besoin perçu · Disposé',     muted: false },
+  1: { label: 'Besoin perçu · Disposé',              muted: false },
+  2: { label: 'Besoin perçu · Moins disposé',        muted: false },
+  3: { label: 'Pas de besoin perçu · Disposé',       muted: false },
   4: { label: 'Pas de besoin perçu · Moins disposé', muted: true  },
 };
 
@@ -93,7 +83,7 @@ const RECO_META: Record<string, { label: string; desc: string; muted: boolean }>
   A_ORIENTER:              { label: 'À orienter',              desc: 'Niveau hors cible.',                                                                    muted: true  },
 };
 
-// ============ 4 niveaux Roxane ============
+// ============ 4 niveaux de maîtrise ============
 function scoreToMastery(score: number): { label: string; color: string } {
   if (score >= 0.875) return { label: 'Maîtrisé', color: COLORS.emerald };
   if (score >= 0.625) return { label: 'En cours de maîtrise', color: COLORS.accent };
@@ -118,7 +108,7 @@ function formatDuration(seconds: number): string {
   return `${m} min ${String(s).padStart(2, '0')} s`;
 }
 
-// ============ Styles ============
+// ============ Styles (copie exacte du collectif) ============
 const styles = StyleSheet.create({
   page: {
     backgroundColor: COLORS.bg,
@@ -166,27 +156,29 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
   },
 
-  filterBar: {
+  identityBand: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
     backgroundColor: COLORS.panelTint,
     borderWidth: 0.6,
     borderColor: COLORS.line,
     borderRadius: 6,
     padding: 8,
     marginBottom: 10,
-    flexDirection: 'row',
-    gap: 12,
-    flexWrap: 'wrap',
   },
-  filterLabel: {
-    fontSize: 8,
+  idCell: { minWidth: 100 },
+  idLabel: {
+    fontSize: 7,
     color: COLORS.muted,
-    letterSpacing: 0.8,
+    letterSpacing: 1,
+    marginBottom: 2,
     fontFamily: 'Helvetica-Bold',
   },
-  filterValue: {
-    fontSize: 8.5,
+  idValue: {
+    fontSize: 9,
+    fontFamily: 'Helvetica-Bold',
     color: COLORS.ink,
-    marginRight: 12,
   },
 
   kpiRow: {
@@ -249,7 +241,6 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
   },
 
-  // ─── Radar section (nouveau) ───
   radarWrap: {
     alignItems: 'center',
     marginTop: 4,
@@ -364,6 +355,8 @@ const styles = StyleSheet.create({
   },
   quadrantCellActive: {
     backgroundColor: COLORS.accentSoft,
+    borderColor: COLORS.accent,
+    borderWidth: 1.2,
   },
   quadrantCellMuted: {
     backgroundColor: COLORS.lineSoft,
@@ -374,15 +367,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Helvetica-Bold',
     marginBottom: 4,
   },
-  quadrantPct: {
-    fontSize: 16,
-    fontFamily: 'Times-Italic',
-    color: COLORS.accent,
-    lineHeight: 1,
-  },
-  quadrantCount: {
+  quadrantTag: {
     fontSize: 8,
-    color: COLORS.muted,
+    color: COLORS.accent,
+    fontFamily: 'Helvetica-Bold',
     marginTop: 2,
   },
 
@@ -398,10 +386,12 @@ const styles = StyleSheet.create({
     borderWidth: 0.6,
     borderColor: COLORS.line,
     borderRadius: 6,
-    backgroundColor: COLORS.accentSoft,
-  },
-  recoCellMuted: {
     backgroundColor: COLORS.lineSoft,
+  },
+  recoCellActive: {
+    backgroundColor: COLORS.accentSoft,
+    borderColor: COLORS.accent,
+    borderWidth: 1.2,
   },
   recoLabel: {
     fontSize: 9,
@@ -409,15 +399,10 @@ const styles = StyleSheet.create({
     color: COLORS.ink,
     marginBottom: 4,
   },
-  recoPct: {
-    fontSize: 20,
-    fontFamily: 'Times-Italic',
-    color: COLORS.accent,
-    lineHeight: 1,
-  },
-  recoCount: {
+  recoTag: {
     fontSize: 8,
-    color: COLORS.muted,
+    color: COLORS.accent,
+    fontFamily: 'Helvetica-Bold',
     marginTop: 2,
   },
   recoDesc: {
@@ -444,29 +429,26 @@ const styles = StyleSheet.create({
 // ============ Header réutilisable ============
 function Header({
   orgName,
+  fullName,
   logo,
-  generatedAt,
-  totalParticipants,
+  completedAt,
 }: {
   orgName: string;
+  fullName: string;
   logo?: Buffer | string | null;
-  generatedAt: Date;
-  totalParticipants: number;
+  completedAt: Date;
 }) {
   return (
     <View style={styles.topBar} fixed>
       <View style={styles.logoWrap}>
         {logo && <Image src={logo as any} style={styles.logoImg} />}
         <Text style={styles.logoKicker}>
-          BILAN COLLECTIF — {orgName.toUpperCase()}
+          BILAN INDIVIDUEL — {fullName.toUpperCase()} — {orgName.toUpperCase()}
         </Text>
       </View>
       <View>
         <Text style={styles.topMeta}>
-          Généré le {formatDateFR(generatedAt)}
-        </Text>
-        <Text style={styles.topMeta}>
-          {totalParticipants} participant{totalParticipants > 1 ? 's' : ''}
+          Complété le {formatDateFR(completedAt)}
         </Text>
       </View>
     </View>
@@ -474,19 +456,16 @@ function Header({
 }
 
 // ============ Composant principal ============
-export default function BilanCollectifPDF({
+export default function BilanAdminIndividuelPDF({
   data,
   logo,
 }: {
-  data: CollectifData;
+  data: AdminIndivData;
   logo?: Buffer | string | null;
 }) {
-  const globalPct = Math.round(data.avgGlobalScore * 100);
-  const dominantLevelLabel = data.dominantLevel
-    ? `${data.dominantLevel} · ${LEVEL_META[data.dominantLevel].desc}`
-    : '—';
-
-  const hasFilters = !!(data.filters.status || data.filters.group || data.filters.search);
+  const fullName = `${data.firstName} ${data.lastName}`.trim() || 'Participant';
+  const globalPct = Math.round((data.scoreProcedural / 6) * 100);
+  const levelInfo = LEVEL_META[data.level];
 
   return (
     <Document>
@@ -494,70 +473,81 @@ export default function BilanCollectifPDF({
       <Page size="A4" style={styles.page}>
         <Header
           orgName={data.organizationName}
+          fullName={fullName}
           logo={logo}
-          generatedAt={data.generatedAt}
-          totalParticipants={data.totalParticipants}
+          completedAt={data.completedAt}
         />
 
         <View style={styles.titleBlock}>
-          <Text style={styles.title}>Restitution collective</Text>
+          <Text style={styles.title}>Bilan individuel</Text>
           <Text style={styles.subtitle}>
-            {data.completedCount} diagnostic{data.completedCount > 1 ? 's' : ''} complété
-            {data.completedCount > 1 ? 's' : ''} sur {data.totalParticipants} participant
-            {data.totalParticipants > 1 ? 's' : ''}.
+            Bilan du diagnostic passé par {fullName}.
           </Text>
         </View>
 
-        {hasFilters && (
-          <View style={styles.filterBar}>
-            <Text style={styles.filterLabel}>FILTRES ACTIFS</Text>
-            {data.filters.status && (
-              <Text style={styles.filterValue}>Statut : {data.filters.status}</Text>
-            )}
-            {data.filters.group && (
-              <Text style={styles.filterValue}>Groupe : {data.filters.group}</Text>
-            )}
-            {data.filters.search && (
-              <Text style={styles.filterValue}>Recherche : « {data.filters.search} »</Text>
-            )}
+        {/* Bandeau identité */}
+        <View style={styles.identityBand}>
+          <View style={styles.idCell}>
+            <Text style={styles.idLabel}>PARTICIPANT</Text>
+            <Text style={styles.idValue}>{fullName}</Text>
           </View>
-        )}
+          <View style={styles.idCell}>
+            <Text style={styles.idLabel}>EMAIL</Text>
+            <Text style={styles.idValue}>{data.email}</Text>
+          </View>
+          <View style={styles.idCell}>
+            <Text style={styles.idLabel}>ORGANISATION</Text>
+            <Text style={styles.idValue}>{data.organizationName}</Text>
+          </View>
+          {data.groupName && (
+            <View style={styles.idCell}>
+              <Text style={styles.idLabel}>GROUPE</Text>
+              <Text style={styles.idValue}>{data.groupName}</Text>
+            </View>
+          )}
+          <View style={styles.idCell}>
+            <Text style={styles.idLabel}>RÉFÉRENCE</Text>
+            <Text style={styles.idValue}>{data.reference}</Text>
+          </View>
+        </View>
 
         {/* 4 KPIs */}
         <View style={styles.kpiRow}>
           <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>SCORE MOYEN</Text>
+            <Text style={styles.kpiLabel}>SCORE</Text>
             <Text style={styles.kpiValue}>{globalPct} %</Text>
-            <Text style={styles.kpiHint}>bonnes réponses</Text>
+            <Text style={styles.kpiHint}>{data.correctTotal} / 48 bonnes réponses</Text>
           </View>
           <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>COMPLÉTÉS</Text>
-            <Text style={styles.kpiValue}>{data.completedCount}</Text>
-            <Text style={styles.kpiHint}>diagnostics</Text>
+            <Text style={styles.kpiLabel}>NIVEAU GLOBAL</Text>
+            <Text style={styles.kpiValue}>{data.level}</Text>
+            <Text style={styles.kpiHint}>{levelInfo.desc}</Text>
           </View>
           <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>NIVEAU DOMINANT</Text>
-            <Text style={styles.kpiValue}>{data.dominantLevel ?? '—'}</Text>
-            <Text style={styles.kpiHint}>{dominantLevelLabel.split(' · ')[1] ?? ''}</Text>
+            <Text style={styles.kpiLabel}>TEMPS TOTAL</Text>
+            <Text style={styles.kpiValue}>{formatDuration(data.totalTimeSeconds)}</Text>
+            <Text style={styles.kpiHint}>de passation</Text>
           </View>
           <View style={styles.kpiCard}>
-            <Text style={styles.kpiLabel}>TEMPS MOYEN</Text>
-            <Text style={styles.kpiValue}>{formatDuration(data.avgTimeSeconds)}</Text>
-            <Text style={styles.kpiHint}>par participant</Text>
+            <Text style={styles.kpiLabel}>DATE</Text>
+            <Text style={[styles.kpiValue, { fontSize: 14 }]}>
+              {formatDateFR(data.completedAt)}
+            </Text>
+            <Text style={styles.kpiHint}>diagnostic complété</Text>
           </View>
         </View>
 
         {/* Section I.1 — Profil de compétences (RADAR) */}
         <View style={styles.sectionCard} wrap={false}>
-          <Text style={styles.sectionKicker}>I.1 · PROFIL DE COMPÉTENCES</Text>
-          <Text style={styles.sectionTitle}>Maîtrise moyenne par bloc</Text>
+          <Text style={styles.sectionKicker}>I · PROFIL DE COMPÉTENCES</Text>
+          <Text style={styles.sectionTitle}>Maîtrise par bloc</Text>
           <Text style={styles.sectionSub}>
-            Score moyen de l&apos;équipe sur chacun des 6 domaines évalués.
+            Score du participant sur chacun des 6 domaines évalués.
           </Text>
 
           <View style={styles.radarWrap}>
             <SharedRadar
-              blocks={data.blocks.map((b) => ({ label: b.label, score: b.avgScore }))}
+              blocks={data.blocks.map((b) => ({ label: b.label, score: b.score }))}
               colors={{
                 accent: COLORS.accent,
                 panel: COLORS.panel,
@@ -589,46 +579,9 @@ export default function BilanCollectifPDF({
           </View>
         </View>
 
-        {/* Section I.2 — Niveaux de maîtrise */}
-        <View style={styles.sectionCard} wrap={false}>
-          <Text style={styles.sectionKicker}>I.2 · NIVEAUX DE MAÎTRISE</Text>
-          <Text style={styles.sectionTitle}>Répartition des niveaux</Text>
-
-          <View style={styles.levelLegendRow}>
-            {(['A', 'B1', 'B2', 'C'] as const).map((lvl) => (
-              <View key={lvl} style={styles.levelLegendItem}>
-                <View style={[styles.levelDot, { backgroundColor: LEVEL_META[lvl].color }]} />
-                <Text style={styles.levelLegendText}>
-                  {LEVEL_META[lvl].name}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          <View style={styles.histogramRow}>
-            {data.levels.map((l) => {
-              const barHeight = Math.max(4, (l.pct / 100) * 70);
-              return (
-                <View key={l.level} style={styles.histoCol}>
-                  <Text style={styles.histoTopLabel}>{l.pct} %</Text>
-                  <View
-                    style={[
-                      styles.histoBar,
-                      { height: barHeight, backgroundColor: LEVEL_META[l.level].color },
-                    ]}
-                  />
-                  <Text style={styles.histoBottomLabel}>{l.level}</Text>
-                  <Text style={styles.histoCount}>
-                    {l.count} personne{l.count > 1 ? 's' : ''}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
 
         <View style={styles.footer} fixed>
-          <Text>OHÉ · DOCUMENT CONFIDENTIEL</Text>
+          <Text>OHÉ · DOCUMENT CONFIDENTIEL · RÉF {data.reference}</Text>
           <Text
             render={({ pageNumber, totalPages }) => `P. ${pageNumber} / ${totalPages}`}
           />
@@ -639,17 +592,17 @@ export default function BilanCollectifPDF({
       <Page size="A4" style={styles.page}>
         <Header
           orgName={data.organizationName}
+          fullName={fullName}
           logo={logo}
-          generatedAt={data.generatedAt}
-          totalParticipants={data.totalParticipants}
+          completedAt={data.completedAt}
         />
 
         {/* Section II — Déclarations */}
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionKicker}>II · DÉCLARATIONS DES PARTICIPANTS</Text>
+          <Text style={styles.sectionKicker}>II · DÉCLARATIONS DU PARTICIPANT</Text>
           <Text style={styles.sectionTitle}>Besoin perçu × Disposition à se former</Text>
           <Text style={styles.sectionSub}>
-            Croisement entre ce que chaque participant pense de son niveau et sa disposition à suivre une formation.
+            Positionnement du participant selon le besoin qu&apos;il perçoit et sa disposition à suivre une formation.
           </Text>
 
           <View style={styles.quadrantGrid}>
@@ -662,21 +615,20 @@ export default function BilanCollectifPDF({
             <View style={styles.quadrantRow}>
               <Text style={styles.quadrantRowLabel}>DISPOSÉ</Text>
               {[1, 3].map((qNum) => {
-                const q = data.quadrants.find((x) => x.quadrant === qNum);
                 const meta = QUADRANT_META[qNum];
+                const isActive = data.quadrant === qNum;
                 return (
                   <View
                     key={qNum}
                     style={[
                       styles.quadrantCell,
-                      meta.muted ? styles.quadrantCellMuted : styles.quadrantCellActive,
+                      isActive ? styles.quadrantCellActive : styles.quadrantCellMuted,
                     ]}
                   >
                     <Text style={styles.quadrantLabel}>{meta.label}</Text>
-                    <Text style={styles.quadrantPct}>{q?.pct ?? 0} %</Text>
-                    <Text style={styles.quadrantCount}>
-                      {q?.count ?? 0} personne{(q?.count ?? 0) > 1 ? 's' : ''}
-                    </Text>
+                    {isActive && (
+                      <Text style={styles.quadrantTag}>✓ Profil du participant</Text>
+                    )}
                   </View>
                 );
               })}
@@ -685,21 +637,20 @@ export default function BilanCollectifPDF({
             <View style={styles.quadrantRow}>
               <Text style={styles.quadrantRowLabel}>MOINS DISPOSÉ</Text>
               {[2, 4].map((qNum) => {
-                const q = data.quadrants.find((x) => x.quadrant === qNum);
                 const meta = QUADRANT_META[qNum];
+                const isActive = data.quadrant === qNum;
                 return (
                   <View
                     key={qNum}
                     style={[
                       styles.quadrantCell,
-                      meta.muted ? styles.quadrantCellMuted : styles.quadrantCellActive,
+                      isActive ? styles.quadrantCellActive : styles.quadrantCellMuted,
                     ]}
                   >
                     <Text style={styles.quadrantLabel}>{meta.label}</Text>
-                    <Text style={styles.quadrantPct}>{q?.pct ?? 0} %</Text>
-                    <Text style={styles.quadrantCount}>
-                      {q?.count ?? 0} personne{(q?.count ?? 0) > 1 ? 's' : ''}
-                    </Text>
+                    {isActive && (
+                      <Text style={styles.quadrantTag}>✓ Profil du participant</Text>
+                    )}
                   </View>
                 );
               })}
@@ -710,7 +661,7 @@ export default function BilanCollectifPDF({
         {/* Section III — Préconisation */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionKicker}>III · PRÉCONISATION</Text>
-          <Text style={styles.sectionTitle}>Actions recommandées</Text>
+          <Text style={styles.sectionTitle}>Action recommandée</Text>
           <Text style={styles.sectionSub}>
             Croisement des résultats du test et des déclarations pour déterminer la suite la plus adaptée.
           </Text>
@@ -719,17 +670,19 @@ export default function BilanCollectifPDF({
             {(['A_FORMER', 'A_FORMER_ET_ACCOMPAGNER', 'A_FORMER_SOUS_RESERVES', 'A_ORIENTER'] as const).map(
               (key) => {
                 const meta = RECO_META[key];
-                const reco = data.recos.find((r) => r.key === key);
+                const isActive = data.recommandation === key;
                 return (
                   <View
                     key={key}
-                    style={[styles.recoCell, meta.muted ? styles.recoCellMuted : {}]}
+                    style={[
+                      styles.recoCell,
+                      isActive ? styles.recoCellActive : {},
+                    ]}
                   >
                     <Text style={styles.recoLabel}>{meta.label}</Text>
-                    <Text style={styles.recoPct}>{reco?.pct ?? 0} %</Text>
-                    <Text style={styles.recoCount}>
-                      {reco?.count ?? 0} personne{(reco?.count ?? 0) > 1 ? 's' : ''}
-                    </Text>
+                    {isActive && (
+                      <Text style={styles.recoTag}>✓ Préconisation</Text>
+                    )}
                     <Text style={styles.recoDesc}>{meta.desc}</Text>
                   </View>
                 );
@@ -739,7 +692,7 @@ export default function BilanCollectifPDF({
         </View>
 
         <View style={styles.footer} fixed>
-          <Text>OHÉ · DOCUMENT CONFIDENTIEL</Text>
+          <Text>OHÉ · DOCUMENT CONFIDENTIEL · RÉF {data.reference}</Text>
           <Text
             render={({ pageNumber, totalPages }) => `P. ${pageNumber} / ${totalPages}`}
           />
