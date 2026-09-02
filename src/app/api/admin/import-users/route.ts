@@ -5,6 +5,8 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { sendMagicLinkEmail } from '@/lib/email';
 
+export const maxDuration = 60; // 60 secondes max pour cette route
+
 // ============ Helpers ============
 function normalizeGroupName(name: string): string {
   return name.trim().replace(/\s+/g, ' ');
@@ -35,7 +37,6 @@ const bodySchema = z.object({
 export async function POST(request: Request) {
   const session = await auth();
 
-  // Accès réservé aux ADMIN et SUPERADMIN
   if (
     !session?.user ||
     (session.user.role !== 'ADMIN' && session.user.role !== 'SUPERADMIN')
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
 
   // ===== Étape 1 : validation ligne par ligne =====
   interface ParsedRow {
-    lineNumber: number; // 1-based, incluant la ligne d'en-tête
+    lineNumber: number;
     email: string;
     groupName: string | null;
   }
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
   const validRows: ParsedRow[] = [];
 
   rows.forEach((row, idx) => {
-    const lineNumber = idx + 2; // +2 = ligne d'en-tête + index 0-based
+    const lineNumber = idx + 2;
     const rawEmail = (row.email ?? '').trim().toLowerCase();
     const rawGroup = row.group ? row.group.trim() : '';
 
@@ -90,7 +91,6 @@ export async function POST(request: Request) {
     });
   });
 
-  // Dédoublonnage interne au fichier (garde la première occurrence)
   const seenEmails = new Set<string>();
   const dedupedRows: ParsedRow[] = [];
   for (const r of validRows) {
@@ -127,7 +127,6 @@ export async function POST(request: Request) {
 
   const existingByEmail = new Map(existingUsers.map((u) => [u.email, u]));
 
-  // Détecter les emails d'autres orgs → erreurs
   const foreignUsers = existingUsers.filter((u) => u.organizationId !== orgId);
   foreignUsers.forEach((u) => {
     const row = dedupedRows.find((r) => r.email === u.email);
@@ -160,7 +159,7 @@ export async function POST(request: Request) {
   );
 
   const groupsToCreate: string[] = [];
-  const groupResolution = new Map<string, string>(); // groupName (raw) → groupId
+  const groupResolution = new Map<string, string>();
 
   for (const rawName of uniqueGroupNames) {
     const cleanName = normalizeGroupName(rawName);
@@ -198,7 +197,10 @@ export async function POST(request: Request) {
     );
   }
 
-  // ===== Étape 5 : traitement en transaction (bulk, peu de requêtes) =====
+  // Capture les valeurs pour les closures async
+  const orgName = organization.name;
+
+  // ===== Étape 5 : traitement en transaction =====
   const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
   const magicLinksToSend: { email: string; magicLinkUrl: string }[] = [];
   let created = 0;
@@ -208,12 +210,10 @@ export async function POST(request: Request) {
 
   await prisma.$transaction(
     async (tx) => {
-      // 5a) Créer les nouveaux groupes
       for (const groupName of groupsToCreate) {
         const newGroup = await tx.group.create({
           data: { name: groupName, organizationId: orgId },
         });
-        // Retrouver le rawName correspondant pour renseigner groupResolution
         const rawMatch = uniqueGroupNames.find(
           (r) => normalizeForCompare(normalizeGroupName(r)) === normalizeForCompare(groupName),
         );
@@ -221,7 +221,6 @@ export async function POST(request: Request) {
         groupsCreatedNames.push(newGroup.name);
       }
 
-      // 5b) Séparer users existants (attribution groupe) vs nouveaux (création bulk)
       const usersToUpdate: { id: string; groupId: string }[] = [];
       const newUserRows: {
         id: string;
@@ -236,7 +235,6 @@ export async function POST(request: Request) {
         const existing = existingByEmail.get(row.email);
 
         if (existing) {
-          // Existant : attribuer le groupe uniquement si l'user n'en a pas ET que le fichier en fournit un
           if (!existing.groupId && groupId) {
             usersToUpdate.push({ id: existing.id, groupId });
             attributed++;
@@ -244,7 +242,6 @@ export async function POST(request: Request) {
             skipped++;
           }
         } else {
-          // Nouveau : préparer la création bulk (user + session + magic-link)
           const id = crypto.randomUUID();
           const magicLinkToken = crypto.randomBytes(32).toString('hex');
           newUserRows.push({
@@ -257,7 +254,6 @@ export async function POST(request: Request) {
         }
       }
 
-      // Attributions de groupe sur users existants (petit volume, boucle OK)
       for (const u of usersToUpdate) {
         await tx.user.update({ where: { id: u.id }, data: { groupId: u.groupId } });
       }
@@ -265,7 +261,6 @@ export async function POST(request: Request) {
       if (newUserRows.length > 0) {
         const magicLinkExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
-        // Création bulk des users (1 requête au lieu de N)
         await tx.user.createMany({
           data: newUserRows.map((u) => ({
             id: u.id,
@@ -279,7 +274,6 @@ export async function POST(request: Request) {
           })),
         });
 
-        // Création bulk des sessions PENDING (1 requête au lieu de N)
         await tx.testSession.createMany({
           data: newUserRows.map((u) => ({
             userId: u.id,
@@ -288,13 +282,11 @@ export async function POST(request: Request) {
           })),
         });
 
-        // Décrément unique des crédits (1 requête au lieu de N)
         await tx.organization.update({
           where: { id: orgId },
           data: { credits: { decrement: newUserRows.length } },
         });
 
-        // Création bulk des transactions de crédit (1 requête au lieu de N)
         await tx.creditTransaction.createMany({
           data: newUserRows.map(() => ({
             organizationId: orgId,
@@ -310,27 +302,54 @@ export async function POST(request: Request) {
         );
       }
     },
-    { timeout: 30000 }, // 30s pour gros imports
+    { timeout: 30000 },
   );
 
-  // ===== Étape 6 : envoi des emails (best-effort, hors transaction) =====
+  // ===== Étape 6 : envoi des emails (séquentiel avec throttle + retry) =====
   const emailErrors: { email: string; error: string }[] = [];
-  await Promise.allSettled(
-    magicLinksToSend.map(async ({ email, magicLinkUrl }) => {
+  const emailsSent: string[] = [];
+
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  async function sendWithRetry(
+    email: string,
+    magicLinkUrl: string,
+    maxRetries = 3,
+  ): Promise<void> {
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         await sendMagicLinkEmail({
           to: email,
           magicLinkUrl,
-          organizationName: organization.name,
+          organizationName: orgName,
           recipientRole: 'USER',
         });
-        console.log(`📧 Import — Magic link envoyé à ${email}`);
+        return;
       } catch (err) {
-        console.error(`❌ Import — Envoi échoué à ${email}:`, err);
-        emailErrors.push({ email, error: String(err) });
+        lastError = err;
+        const msg = String(err);
+        const isRateLimit = msg.includes('429') || msg.toLowerCase().includes('rate');
+        if (!isRateLimit || attempt === maxRetries - 1) break;
+        const backoff = 1000 * Math.pow(2, attempt);
+        console.warn(`⏳ Rate limit sur ${email}, retry dans ${backoff}ms (tentative ${attempt + 2}/${maxRetries})`);
+        await sleep(backoff);
       }
-    }),
-  );
+    }
+    throw lastError;
+  }
+
+  for (const { email, magicLinkUrl } of magicLinksToSend) {
+    try {
+      await sendWithRetry(email, magicLinkUrl);
+      emailsSent.push(email);
+      console.log(`📧 Import — Magic link envoyé à ${email}`);
+    } catch (err) {
+      console.error(`❌ Import — Envoi échoué à ${email}:`, err);
+      emailErrors.push({ email, error: String(err) });
+    }
+    await sleep(600);
+  }
 
   // ===== Étape 7 : rapport final =====
   const remainingOrg = await prisma.organization.findUnique({
@@ -349,6 +368,7 @@ export async function POST(request: Request) {
     creditsUsed: created,
     creditsRemaining: remainingOrg?.credits ?? 0,
     errors,
+    emailsSent: emailsSent.length,
     emailErrors: emailErrors.length > 0 ? emailErrors : undefined,
   });
 }
