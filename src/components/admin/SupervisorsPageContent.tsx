@@ -69,13 +69,14 @@ export default function SupervisorsPageContent({
       <div className="flex items-start justify-between mb-8 gap-6">
         <div>
           
-          <h1 className="font-serif text-4xl text-ohe-slate-900 mb-2">
-            Vos référents
-          </h1>
-          <p className="text-sm text-ohe-slate-600">
-            Chaque référent consulte uniquement les participants des groupes qui lui sont
-            attribués.
-          </p>
+          <h1 className="font-serif font-normal text-4xl lg:text-[48px] leading-[1.05] tracking-tight text-ohe-slate-900">
+  Vos <em className="italic text-ohe-blue">référents.</em>
+</h1>
+
+          <p className="mt-4 text-base text-ohe-slate-600 leading-relaxed">
+  Chaque référent consulte uniquement les participants des groupes qui lui sont attribués.
+</p>
+
         </div>
         <Button variant="primary" onClick={() => setIsCreateOpen(true)}>
           + Ajouter un référent
