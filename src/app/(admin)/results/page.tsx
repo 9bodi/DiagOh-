@@ -42,24 +42,25 @@ const RECOMMANDATION_META: Record<Recommandation, { label: string; tone: string;
   A_FORMER: {
     label: 'À former',
     tone: 'bg-sky-50 border-sky-200 text-sky-900',
-    desc: 'Public prioritaire',
+    desc: 'Le niveau correspond, le besoin est identifié et la disposition à se former est forte.',
   },
   A_FORMER_ET_ACCOMPAGNER: {
     label: 'À former et accompagner',
     tone: 'bg-sky-50 border-sky-200 text-sky-900',
-    desc: 'Nécessite un accompagnement',
+    desc: "Le niveau correspond, mais il faut travailler l'adhésion.",
   },
   A_FORMER_SOUS_RESERVES: {
     label: 'À former sous réserves',
     tone: 'bg-sky-50 border-sky-200 text-sky-900',
-    desc: 'À évaluer au cas par cas',
+    desc: 'La personne exprime une demande ou un besoin, mais son niveau invite à vérifier la pertinence de la formation.',
   },
   A_ORIENTER: {
-    label: 'À orienter',
+    label: "À orienter vers d'autres solutions",
     tone: 'bg-neutral-100 border-neutral-200 text-neutral-600',
-    desc: 'Vers une autre solution',
+    desc: 'Niveau hors cible, trop élevé ou insuffisant.',
   },
 };
+
 
 
 const BLOCKS = [

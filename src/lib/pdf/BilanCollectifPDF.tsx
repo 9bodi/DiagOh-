@@ -87,11 +87,12 @@ const QUADRANT_META: Record<number, { label: string; muted: boolean }> = {
 };
 
 const RECO_META: Record<string, { label: string; desc: string; muted: boolean }> = {
-  A_FORMER:                { label: 'À former',                desc: 'Le niveau correspond, le besoin est identifié et la disposition à se former est forte.', muted: false },
-  A_FORMER_ET_ACCOMPAGNER: { label: 'À former et accompagner', desc: 'Le niveau correspond, mais la disposition à se former est faible.',                    muted: false },
-  A_FORMER_SOUS_RESERVES:  { label: 'À former sous réserves',  desc: 'Le résultat du test et les déclarations divergent. Un échange avec le participant est recommandé avant de décider.', muted: false },
-  A_ORIENTER:              { label: 'À orienter',              desc: 'Niveau hors cible.',                                                                    muted: true  },
+  A_FORMER:                { label: 'À former',                            desc: 'Le niveau correspond, le besoin est identifié et la disposition à se former est forte.', muted: false },
+  A_FORMER_ET_ACCOMPAGNER: { label: 'À former et accompagner',             desc: "Le niveau correspond, mais il faut travailler l'adhésion.",                                                                                        muted: false },
+  A_FORMER_SOUS_RESERVES:  { label: 'À former sous réserves',              desc: 'La personne exprime une demande ou un besoin, mais son niveau invite à vérifier la pertinence de la formation.',                                    muted: false },
+  A_ORIENTER:              { label: "À orienter vers d'autres solutions",  desc: 'Niveau hors cible, trop élevé ou insuffisant.',                                                                                                     muted: true  },
 };
+
 
 // ============ 4 niveaux Roxane ============
 function scoreToMastery(score: number): { label: string; color: string } {
