@@ -5,6 +5,8 @@ import AdminHeader from '@/components/admin/AdminHeader';
 import { getAccessibleGroupIds } from '@/lib/permissions';
 import { RECOMMANDATION_LABELS } from '@/lib/scoring';
 import type { Recommandation } from '@prisma/client';
+import ResultRadar from '@/components/result/ResultRadar';
+
 
 // ============ Métadonnées ============
 const LEVEL_META: Record<string, { name: string; bar: string; badge: string; dot: string; desc: string }> = {
@@ -123,6 +125,20 @@ export default async function ResultsPage() {
   });
 
   const total = completedSessions.length;
+    // ===== Temps moyen par question (en secondes) =====
+  const completedSessionIds = completedSessions.map(s => s.id);
+  const proceduralAnswers = await prisma.answer.findMany({
+    where: {
+      testSessionId: { in: completedSessionIds },
+      question: { type: 'PROCEDURAL' },
+      timeSpent: { not: null, gt: 0 },
+    },
+    select: { timeSpent: true },
+  });
+  const totalTime = proceduralAnswers.reduce((sum, a) => sum + (a.timeSpent ?? 0), 0);
+  const avgTimePerQuestionSec =
+    proceduralAnswers.length > 0 ? totalTime / proceduralAnswers.length : 0;
+
 
   // ===== Répartition par niveau =====
   const levelCounts = { A: 0, B1: 0, B2: 0, C: 0 } as Record<string, number>;
@@ -173,9 +189,7 @@ export default async function ResultsPage() {
       <div className="max-w-6xl mx-auto px-6 py-10">
         {/* Hero */}
         <div className="mb-10">
-          <p className="font-mono text-[11px] tracking-[0.16em] uppercase text-ohe-orange mb-4">
-            Restitution
-          </p>
+          
           <h1 className="font-serif font-normal text-4xl lg:text-[48px] leading-[1.05] tracking-tight text-ohe-slate-900">
             Restitution <em className="italic text-ohe-blue">collective.</em>
           </h1>
@@ -206,8 +220,8 @@ export default async function ResultsPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* 3 KPI */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {/* 4 KPI */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <KpiCard
                 label="Score moyen"
                 value={avgScorePct.toFixed(1).replace('.', ',')}
@@ -227,7 +241,15 @@ export default async function ResultsPage() {
                 hint="le plus représenté"
                 accent="orange"
               />
+              <KpiCard
+                label="Temps moyen / Q"
+                value={avgTimePerQuestionSec.toFixed(1).replace('.', ',')}
+                suffix="s"
+                hint="par question, sur l'ensemble"
+                accent="slate"
+              />
             </div>
+
 
             {/* Niveau de maîtrise global */}
             <Section
@@ -293,54 +315,26 @@ export default async function ResultsPage() {
 
             </Section>
 
-            {/* Maîtrise moyenne par bloc */}
+                       {/* Profil de compétences (radar) */}
             <Section
-              title={<>Maîtrise moyenne <em className="italic text-ohe-blue">par bloc.</em></>}
-              subtitle="Repérez les blocs à renforcer collectivement."
+              title={<>Profil <em className="italic text-ohe-blue">de compétences.</em></>}
+              subtitle="Moyenne collective par compétence."
             >
-              <div className="space-y-3.5">
-                {blockAverages.map((b, i) => {
-                  const meta = scoreToLabel(b.avg);
-                  const pct = Math.round(b.avg * 100);
-                  const barClass =
-                    meta.tone === 'strong' ? 'bg-emerald-500'
-                    : meta.tone === 'mid'  ? 'bg-ohe-orange'
-                    : 'bg-red-400';
-                  const qualClass =
-                    meta.tone === 'strong' ? 'text-emerald-700'
-                    : meta.tone === 'mid'  ? 'text-ohe-orange'
-                    : 'text-red-600';
-                  return (
-                    <div key={b.num}>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-baseline gap-2.5 min-w-0">
-                          <span className="font-mono text-[10.5px] tracking-[0.14em] text-ohe-slate-500">
-                            {String(i + 1).padStart(2, '0')}
-                          </span>
-                          <span className="text-sm font-medium text-ohe-slate-900 truncate">
-                            {b.label}
-                          </span>
-                        </div>
-                        <div className="flex items-baseline gap-3 flex-shrink-0">
-                          <span className={`font-mono text-[11px] ${qualClass}`}>
-                            {meta.label}
-                          </span>
-                          <span className="font-mono text-xs font-semibold text-ohe-slate-900 w-14 text-right">
-                            {pct}&nbsp;%
-                          </span>
-                        </div>
-                      </div>
-                      <div className="w-full bg-ohe-slate-100 rounded-full h-1.5 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${barClass} transition-all duration-500`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="flex justify-center">
+                <ResultRadar
+                  scores={{
+                    bloc1: blockAverages[0]?.avg ?? 0,
+                    bloc2: blockAverages[1]?.avg ?? 0,
+                    bloc3: blockAverages[2]?.avg ?? 0,
+                    bloc4: blockAverages[3]?.avg ?? 0,
+                    bloc5: blockAverages[4]?.avg ?? 0,
+                    bloc6: blockAverages[5]?.avg ?? 0,
+                  }}
+                  size={520}
+                />
               </div>
             </Section>
+
 
             {/* Déclarations du participant (matrice 2x2) */}
             <Section
