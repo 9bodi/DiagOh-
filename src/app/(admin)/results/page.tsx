@@ -6,6 +6,8 @@ import { getAccessibleGroupIds } from '@/lib/permissions';
 import { RECOMMANDATION_LABELS } from '@/lib/scoring';
 import type { Recommandation } from '@prisma/client';
 import ResultRadar from '@/components/result/ResultRadar';
+import Link from 'next/link';
+
 
 
 // ============ Métadonnées ============
@@ -344,27 +346,39 @@ export default async function ResultsPage() {
                 Cette partie présente les réponses des participants sur leur besoin perçu et leur disposition à suivre une formation.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[1, 2, 3, 4].map(q => {
-  const info = QUADRANT_META[q];
-  const count = quadrantCounts[q];
-  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-  return (
-    <div key={q} className={`p-5 rounded-2xl border ${info.tone}`}>
+  {[1, 2, 3, 4].map(q => {
+    const info = QUADRANT_META[q];
+    const count = quadrantCounts[q];
+    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+    const isDisabled = count === 0;
+    return (
+      <Link
+  key={q}
+  href={`/users?profile=${q}`}
+  aria-disabled={isDisabled}
+  tabIndex={isDisabled ? -1 : 0}
+  className={`block p-5 rounded-2xl border ${info.tone} transition-all ${
+    isDisabled
+      ? 'opacity-60 cursor-not-allowed pointer-events-none'
+      : 'hover:shadow-md hover:-translate-y-0.5 hover:border-ohe-blue cursor-pointer'
+  }`}
+  title={isDisabled ? 'Aucun participant dans ce cadran' : `Voir les ${count} participant${count > 1 ? 's' : ''} de ce cadran`}
+>
+  <p className="font-serif text-xl tracking-tight mb-3 leading-snug">
+    {info.label}
+  </p>
+  <div className="flex items-baseline gap-2">
+    <span className="font-serif text-3xl">{pct}%</span>
+    <span className="text-xs opacity-70">
+      ({count}&nbsp;pers.)
+    </span>
+  </div>
+</Link>
 
-                      <p className="font-serif text-xl tracking-tight mb-3 leading-snug">
-                        {info.label}
-                      </p>
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-serif text-3xl">{pct}%</span>
-                        <span className="text-xs opacity-70">
-                          ({count}&nbsp;{count > 1 ? 'pers.' : 'pers.'})
-                        </span>
-                      </div>
-                    </div>
+    );
+  })}
+</div>
 
-                  );
-                })}
-              </div>
             </Section>
 
             {/* Préconisation */}
@@ -374,29 +388,42 @@ export default async function ResultsPage() {
               <p className="text-sm text-ohe-slate-600 leading-relaxed mb-6">
                 Cette préconisation croise les résultats du test et les déclarations du participant, afin de déterminer la suite la plus adaptée.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {(Object.keys(RECOMMANDATION_META) as Recommandation[]).map(key => {
-                  const info = RECOMMANDATION_META[key];
-                  const count = recommandationCounts[key];
-                  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-                  return (
-                    <div key={key} className={`p-5 rounded-2xl border ${info.tone}`}>
-                      <p className="font-serif text-lg tracking-tight mb-2 leading-snug">
-                        {RECOMMANDATION_LABELS[key]}
-                      </p>
-                      <div className="flex items-baseline gap-2 mb-3">
-                        <span className="font-serif text-3xl">{pct}%</span>
-                        <span className="text-xs opacity-70">
-                          ({count}&nbsp;{count > 1 ? 'pers.' : 'pers.'})
-                        </span>
-                      </div>
-                      <p className="text-xs opacity-80 leading-relaxed">
-                        {info.desc}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+  {(Object.keys(RECOMMANDATION_META) as Recommandation[]).map(key => {
+    const info = RECOMMANDATION_META[key];
+    const count = recommandationCounts[key];
+    const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+    const isDisabled = count === 0;
+    return (
+      <Link
+        key={key}
+        href={`/users?reco=${key}`}
+        aria-disabled={isDisabled}
+        tabIndex={isDisabled ? -1 : 0}
+        className={`block p-5 rounded-2xl border ${info.tone} transition-all ${
+          isDisabled
+            ? 'opacity-60 cursor-not-allowed pointer-events-none'
+            : 'hover:shadow-md hover:-translate-y-0.5 hover:border-ohe-blue cursor-pointer'
+        }`}
+        title={isDisabled ? 'Aucun participant dans cette catégorie' : `Voir les ${count} participant${count > 1 ? 's' : ''}`}
+      >
+        <p className="font-serif text-lg tracking-tight mb-2 leading-snug">
+          {RECOMMANDATION_LABELS[key]}
+        </p>
+        <div className="flex items-baseline gap-2 mb-3">
+          <span className="font-serif text-3xl">{pct}%</span>
+          <span className="text-xs opacity-70">
+            ({count}&nbsp;pers.)
+          </span>
+        </div>
+        <p className="text-xs opacity-80 leading-relaxed">
+          {info.desc}
+        </p>
+      </Link>
+    );
+  })}
+</div>
+
             </Section>
           </div>
         )}
