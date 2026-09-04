@@ -80,44 +80,41 @@ export const RECOMMANDATION_LABELS: Record<Recommandation, string> = {
 /**
  * Calcule la préconisation finale en croisant le niveau et le quadrant.
  *
- * Règles (Roxane) :
- *  - B1/B2 + Besoin perçu + Disposé            → À former
- *  - B1/B2 + Moins disposé (peu importe besoin) → À former et accompagner
- *  - B1/B2 + Pas de besoin perçu + Disposé     → À former sous réserves
- *  - A/C   + Besoin perçu (peu importe disp.)  → À former sous réserves
- *  - A/C   + Moins disposé                     → À orienter
- *  - A/C   + Pas de besoin perçu + Disposé     → À former sous réserves (par défaut)
+ * Règles v2 (Roxane, sept. 2025) — simplifiées : la disposition (axe ADAPTATION)
+ * est désormais le seul facteur discriminant, l'axe "besoin perçu" n'entre plus
+ * dans la décision (mais reste affiché dans le profil).
  *
  * Quadrants :
  *  Q1 = Besoin perçu + Disposé
- *  Q2 = Besoin perçu + Moins disposé
- *  Q3 = Pas de besoin perçu + Disposé
- *  Q4 = Pas de besoin perçu + Moins disposé
+ *  Q2 = Besoin perçu + Réticent
+ *  Q3 = Besoin non perçu + Disposé
+ *  Q4 = Besoin non perçu + Réticent
+ *
+ * Règles :
+ *  - B1/B2 + Disposé (Q1 ou Q3)   → À former
+ *  - B1/B2 + Réticent (Q2 ou Q4)  → À former et accompagner
+ *  - A/C   + Disposé (Q1 ou Q3)   → À former sous réserves
+ *  - A/C   + Réticent (Q2 ou Q4)  → À orienter
+ *
+ * Seule différence avec v1 : B1/B2 + Q3 passe de "sous réserves" à "à former".
+ * Les tests passés avant sept. 2025 conservent leur recommandation stockée.
  */
 function computeRecommandation(level: Level, quadrant: number): Recommandation {
   const isIntermediate = level === Level.B1 || level === Level.B2;
   const isExtreme = level === Level.A || level === Level.C;
+  const isDispose = quadrant === 1 || quadrant === 3;
 
   if (isIntermediate) {
-    switch (quadrant) {
-      case 1: return 'A_FORMER';
-      case 2: return 'A_FORMER_ET_ACCOMPAGNER';
-      case 3: return 'A_FORMER_SOUS_RESERVES';
-      case 4: return 'A_FORMER_ET_ACCOMPAGNER';
-    }
+    return isDispose ? 'A_FORMER' : 'A_FORMER_ET_ACCOMPAGNER';
   }
 
   if (isExtreme) {
-    switch (quadrant) {
-      case 1: return 'A_FORMER_SOUS_RESERVES';
-      case 2: return 'A_ORIENTER';
-      case 3: return 'A_FORMER_SOUS_RESERVES';
-      case 4: return 'A_ORIENTER';
-    }
+    return isDispose ? 'A_FORMER_SOUS_RESERVES' : 'A_ORIENTER';
   }
 
   return 'A_FORMER_SOUS_RESERVES';
 }
+
 
 
 export async function computeAndSaveScores(sessionId: string) {
