@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import UsersTable from './UsersTable';
 import InviteUserModal from './InviteUserModal';
 import BulkActivateBar from './BulkActivateBar';
@@ -9,7 +10,6 @@ import UpdateDeadlineModal from './UpdateDeadlineModal';
 import MoveGroupModal from './MoveGroupModal';
 import Button from '@/components/ui/Button';
 import ImportUsersModal from './ImportUsersModal';
-import { useRouter } from 'next/navigation';
 
 import {
   sortUsers,
@@ -36,9 +36,14 @@ type TestFilterKey = 'all' | 'pending' | 'ready' | 'in_progress' | 'completed' |
 export default function UsersPageContent({
   users, orgName, credits, groups, userRole,
 }: UsersPageContentProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [testFilter, setTestFilter] = useState<TestFilterKey>('all');
   const [groupFilter, setGroupFilter] = useState<string>('all');
+  const [profileFilter, setProfileFilter] = useState<string>(searchParams.get('profile') ?? 'all');
+  const [recoFilter, setRecoFilter] = useState<string>(searchParams.get('reco') ?? 'all');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isActivateOpen, setIsActivateOpen] = useState(false);
   const [deadlineUser, setDeadlineUser] = useState<UserRow | null>(null);
@@ -47,8 +52,6 @@ export default function UsersPageContent({
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<SortState | null>(null);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
-const router = useRouter();
-
 
   const testCounts = useMemo(() => {
     const effective = users.map((u) => getEffectiveTestStatus(u));
@@ -84,24 +87,40 @@ const router = useRouter();
       return true;
     });
 
-    // 3) Recherche
+    // 3) Filtre profil (quadrant)
+    if (profileFilter !== 'all') {
+      list = list.filter((u) => String(u.quadrant ?? '') === profileFilter);
+    }
+
+    // 4) Filtre recommandation
+    if (recoFilter !== 'all') {
+      list = list.filter((u) => u.recommandation === recoFilter);
+    }
+
+    // 5) Recherche
     list = filterUsersBySearch(list, search);
 
-    // 4) Tri (ordre par défaut si sort === null)
+    // 6) Tri (ordre par défaut si sort === null)
     list = sortUsers(list, sort);
 
     return list;
-  }, [users, testFilter, groupFilter, search, sort]);
+  }, [users, testFilter, groupFilter, profileFilter, recoFilter, search, sort]);
 
   const visibleIds = new Set(filteredUsers.map((u) => u.id));
   const cleanSelectedIds = selectedIds.filter((id) => visibleIds.has(id));
 
   const hasActiveFilters =
-    testFilter !== 'all' || groupFilter !== 'all' || search !== '';
+    testFilter !== 'all' ||
+    groupFilter !== 'all' ||
+    profileFilter !== 'all' ||
+    recoFilter !== 'all' ||
+    search !== '';
 
   function resetFilters() {
     setTestFilter('all');
     setGroupFilter('all');
+    setProfileFilter('all');
+    setRecoFilter('all');
     setSearch('');
     setSort(null);
   }
@@ -160,8 +179,6 @@ const router = useRouter();
       {/* Recherche + Filtre groupe + Export */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="relative flex-1 min-w-[240px] max-w-md">
-          
-
           <input
             type="search"
             value={search}
@@ -206,6 +223,39 @@ const router = useRouter();
               </select>
             </>
           )}
+
+          <label htmlFor="profile-filter" className="text-xs font-mono uppercase tracking-[0.12em] text-ohe-slate-600">
+            Profil :
+          </label>
+          <select
+            id="profile-filter"
+            value={profileFilter}
+            onChange={(e) => setProfileFilter(e.target.value)}
+            className="px-3 py-1.5 border border-ohe-slate-200 rounded-lg bg-white text-sm text-ohe-slate-900 focus:border-ohe-blue focus:ring-2 focus:ring-ohe-blue/20 outline-none"
+          >
+            <option value="all">Tous</option>
+            <option value="1">Besoin perçu · Disposé</option>
+            <option value="2">Besoin perçu · Réticent</option>
+            <option value="3">Besoin non perçu · Disposé</option>
+            <option value="4">Besoin non perçu · Réticent</option>
+          </select>
+
+          <label htmlFor="reco-filter" className="text-xs font-mono uppercase tracking-[0.12em] text-ohe-slate-600">
+            Reco :
+          </label>
+          <select
+            id="reco-filter"
+            value={recoFilter}
+            onChange={(e) => setRecoFilter(e.target.value)}
+            className="px-3 py-1.5 border border-ohe-slate-200 rounded-lg bg-white text-sm text-ohe-slate-900 focus:border-ohe-blue focus:ring-2 focus:ring-ohe-blue/20 outline-none"
+          >
+            <option value="all">Toutes</option>
+            <option value="A_FORMER">À former</option>
+            <option value="A_FORMER_ET_ACCOMPAGNER">À former + accompagner</option>
+            <option value="A_FORMER_SOUS_RESERVES">À former sous réserves</option>
+            <option value="A_ORIENTER">À orienter</option>
+          </select>
+
           {/* Bouton Rafraîchir */}
           <button
             type="button"
@@ -220,7 +270,7 @@ const router = useRouter();
             Rafraîchir
           </button>
 
-                    {/* Bouton Démarrer le test (grisé si aucune sélection) */}
+          {/* Bouton Démarrer le test (grisé si aucune sélection) */}
           <div className="relative group">
             <button
               type="button"
@@ -248,12 +298,10 @@ const router = useRouter();
             {cleanSelectedIds.length === 0 && (
               <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 bg-ohe-slate-900 text-white text-xs font-medium rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-10 shadow-lg">
                 Aucun participant n&apos;est sélectionné
-                {/* Petite flèche vers le haut */}
                 <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-ohe-slate-900 rotate-45" />
               </div>
             )}
           </div>
-
 
           <button
             type="button"
@@ -272,58 +320,56 @@ const router = useRouter();
           <button
             type="button"
             onClick={async () => {
-  if (isPdfLoading || filteredUsers.length === 0) return;
-  setIsPdfLoading(true);
-  try {
-    const testLabels: Record<string, string> = {
-      all: '', pending: 'En attente', ready: 'Démarré', in_progress: 'En cours',
-      completed: 'Terminé', expired: 'Hors délais',
-    };
-    const groupLabel = groupFilter === 'all'
-      ? ''
-      : groupFilter === 'none'
-        ? 'Sans groupe'
-        : groups.find((g) => g.id === groupFilter)?.name ?? '';
+              if (isPdfLoading || filteredUsers.length === 0) return;
+              setIsPdfLoading(true);
+              try {
+                const testLabels: Record<string, string> = {
+                  all: '', pending: 'En attente', ready: 'Démarré', in_progress: 'En cours',
+                  completed: 'Terminé', expired: 'Hors délais',
+                };
+                const groupLabel = groupFilter === 'all'
+                  ? ''
+                  : groupFilter === 'none'
+                    ? 'Sans groupe'
+                    : groups.find((g) => g.id === groupFilter)?.name ?? '';
 
-    const res = await fetch('/api/pdf/collectif', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userIds: filteredUsers.map((u) => u.id),
-        filters: {
-          status: testLabels[testFilter] || undefined,
-          group: groupLabel || undefined,
-          search: search || undefined,
-        },
-      }),
-    });
+                const res = await fetch('/api/pdf/collectif', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    userIds: filteredUsers.map((u) => u.id),
+                    filters: {
+                      status: testLabels[testFilter] || undefined,
+                      group: groupLabel || undefined,
+                      search: search || undefined,
+                    },
+                  }),
+                });
 
-    if (!res.ok) {
-      const errorText = await res.text().catch(() => 'Erreur inconnue');
-      throw new Error(`Échec de la génération du PDF : ${errorText}`);
-    }
+                if (!res.ok) {
+                  const errorText = await res.text().catch(() => 'Erreur inconnue');
+                  throw new Error(`Échec de la génération du PDF : ${errorText}`);
+                }
 
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const orgSlug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    const dateStr = new Date().toISOString().slice(0, 10);
-    a.download = `bilan-collectif-${orgSlug}-${dateStr}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error(err);
-    alert(err instanceof Error ? err.message : 'Erreur lors de la génération du PDF');
-  } finally {
-    setIsPdfLoading(false);
-  }
-}}
-
-
-disabled={filteredUsers.length === 0 || isPdfLoading}
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const orgSlug = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                const dateStr = new Date().toISOString().slice(0, 10);
+                a.download = `bilan-collectif-${orgSlug}-${dateStr}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              } catch (err) {
+                console.error(err);
+                alert(err instanceof Error ? err.message : 'Erreur lors de la génération du PDF');
+              } finally {
+                setIsPdfLoading(false);
+              }
+            }}
+            disabled={filteredUsers.length === 0 || isPdfLoading}
             className="inline-flex items-center gap-2 px-3 py-1.5 border border-ohe-slate-200 rounded-lg bg-white text-sm font-medium text-ohe-slate-700 hover:border-ohe-slate-300 hover:bg-ohe-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Exporter la vue filtrée au format PDF"
           >

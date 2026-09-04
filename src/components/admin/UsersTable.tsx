@@ -13,6 +13,20 @@ import {
 
 export type { UserRow };
 
+const PROFILE_META: Record<number, { line1: string; line2: string; className: string }> = {
+  1: { line1: 'Besoin perçu',     line2: 'Disposé',  className: 'bg-emerald-50 text-emerald-700' },
+  2: { line1: 'Besoin perçu',     line2: 'Réticent', className: 'bg-ohe-orange/10 text-ohe-orange' },
+  3: { line1: 'Besoin non perçu', line2: 'Disposé',  className: 'bg-ohe-blue/10 text-ohe-blue' },
+  4: { line1: 'Besoin non perçu', line2: 'Réticent', className: 'bg-ohe-slate-100 text-ohe-slate-600' },
+};
+
+const RECO_META: Record<string, { label: string; className: string }> = {
+  A_FORMER:                { label: 'À former',                 className: 'bg-emerald-50 text-emerald-700' },
+  A_FORMER_ET_ACCOMPAGNER: { label: 'À former + accompagner',   className: 'bg-ohe-blue/10 text-ohe-blue' },
+  A_FORMER_SOUS_RESERVES:  { label: 'À former sous réserves',   className: 'bg-ohe-orange/10 text-ohe-orange' },
+  A_ORIENTER:              { label: 'À orienter',               className: 'bg-ohe-slate-100 text-ohe-slate-600' },
+};
+
 // Badges Statut candidat (Importé / Inscrit)
 const ADMIN_STATUS_BADGE: Record<string, { label: string; className: string }> = {
   IMPORTED:   { label: 'Importé', className: 'bg-ohe-slate-100 text-ohe-slate-600' },
@@ -254,24 +268,47 @@ function renderCell(key: ColumnKey, u: UserRow, ctx: CellContext) {
         <span className="text-sm text-ohe-slate-300">—</span>
       );
 
-    case 'level':
-      return u.level ? (
-        <span className={`inline-block px-2.5 py-0.5 rounded-md text-[11px] font-bold ${LEVEL_BADGE[u.level] ?? ''}`}>
-          {u.level}
-        </span>
+        case 'level':
+      return u.level && u.score !== null ? (
+        <div className="flex items-center gap-1.5">
+          <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-bold ${LEVEL_BADGE[u.level] ?? ''}`}>
+            {u.level}
+          </span>
+          <span className="font-mono text-xs text-ohe-slate-700">
+            {Math.round((u.score / 6) * 100)}%
+          </span>
+        </div>
       ) : (
         <span className="text-sm text-ohe-slate-300">—</span>
       );
 
-    case 'score':
-      return u.score !== null ? (
-                <span className="font-mono text-sm font-semibold text-ohe-slate-900">
-          {Math.round((u.score / 6) * 100)} %
-        </span>
-
-      ) : (
-        <span className="text-sm text-ohe-slate-300">—</span>
+    case 'profile': {
+      if (u.status !== 'COMPLETED' || !u.quadrant) {
+        return <span className="text-sm text-ohe-slate-300">—</span>;
+      }
+      const meta = PROFILE_META[u.quadrant];
+      if (!meta) return <span className="text-sm text-ohe-slate-300">—</span>;
+      return (
+        <div className={`inline-block px-2 py-1 rounded-md text-[10.5px] font-medium leading-tight ${meta.className}`}>
+          <div>{meta.line1}</div>
+          <div>· {meta.line2}</div>
+        </div>
       );
+    }
+
+    case 'recommandation': {
+      if (u.status !== 'COMPLETED' || !u.recommandation) {
+        return <span className="text-sm text-ohe-slate-300">—</span>;
+      }
+      const meta = RECO_META[u.recommandation];
+      if (!meta) return <span className="text-sm text-ohe-slate-300">—</span>;
+      return (
+        <span className={`inline-block px-2 py-0.5 rounded-md text-[11px] font-medium ${meta.className}`}>
+          {meta.label}
+        </span>
+      );
+    }
+
 
    
 

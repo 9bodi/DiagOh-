@@ -35,9 +35,11 @@ export type ColumnKey =
   | 'testStatus'
   | 'deadline'
   | 'level'
-  | 'score'
+  | 'profile'
+  | 'recommandation'
   | 'completedAt'
   | 'actions';
+
 
 export type ColumnVisibility =
   | 'always'
@@ -55,16 +57,18 @@ export interface ColumnConfig {
 }
 
 export const USER_TABLE_COLUMNS: ColumnConfig[] = [
-  { key: 'select',      label: '',                visibility: 'always', align: 'center', width: 'w-12' },
-  { key: 'participant', label: 'Participant',     visibility: 'always', sortable: true },
-  { key: 'group',       label: 'Groupe',          visibility: 'always' },
-  { key: 'adminStatus', label: 'Statut candidat', visibility: 'always', sortable: true },
-  { key: 'testStatus',  label: 'Statut test',     visibility: 'always', sortable: true },
-  { key: 'deadline',    label: 'Deadline',        visibility: 'active-context', sortable: true },
-  { key: 'level',       label: 'Niveau',          visibility: 'completed-context' },
-  { key: 'score',       label: 'Score',           visibility: 'completed-context', sortable: true },
-  { key: 'completedAt', label: 'Terminé le',      visibility: 'completed-context', sortable: true },
-  { key: 'actions',     label: 'Actions',         visibility: 'always', align: 'right' },
+    { key: 'select',         label: '',            visibility: 'always',           align: 'center', width: 'w-12' },
+  { key: 'participant',    label: 'Participant', visibility: 'always',           sortable: true,  width: 'w-64' },
+  { key: 'group',          label: 'Groupe',      visibility: 'always' },
+  { key: 'adminStatus',    label: 'Compte',      visibility: 'always',           sortable: true,  width: 'w-28' },
+  { key: 'testStatus',     label: 'Test',        visibility: 'always',           sortable: true,  width: 'w-28' },
+  { key: 'deadline',       label: 'Deadline',    visibility: 'active-context',   sortable: true },
+  { key: 'level',          label: 'Niveau',      visibility: 'completed-context', sortable: true, width: 'w-24' },
+  { key: 'profile',        label: 'Profil',      visibility: 'always',           width: 'w-36' },
+  { key: 'recommandation', label: 'Reco',        visibility: 'always',           width: 'w-36' },
+  { key: 'completedAt',    label: 'Terminé le',  visibility: 'completed-context', sortable: true },
+  { key: 'actions',        label: 'Actions',     visibility: 'always',           align: 'right' },
+
 ];
 
 export function isColumnVisible(
@@ -181,8 +185,9 @@ export function getSortValue(u: UserRow, key: ColumnKey): string | number | null
     case 'testStatus':
   return getTestStatusRank(getEffectiveTestStatus(u));
 
-    case 'score':
+        case 'level':
       return u.score;
+
     case 'deadline':
       return u.deadline ? new Date(u.deadline).getTime() : null;
     case 'completedAt':

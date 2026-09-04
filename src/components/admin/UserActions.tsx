@@ -140,9 +140,19 @@ export default function UserActions({
             Reset
           </ActionLink>
         )}
-        <ActionLink onClick={() => setDeleteModalOpen(true)} tone="red" title="Supprimer le participant">
-          Supprimer
-        </ActionLink>
+               <button
+          type="button"
+          onClick={() => setDeleteModalOpen(true)}
+          title="Supprimer le participant"
+          aria-label="Supprimer le participant"
+          className="p-1.5 rounded-md text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3" />
+          </svg>
+        </button>
+
       </div>
 
       {/* Modal Reset */}
