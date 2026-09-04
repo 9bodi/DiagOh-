@@ -273,14 +273,7 @@ function renderCell(key: ColumnKey, u: UserRow, ctx: CellContext) {
         <span className="text-sm text-ohe-slate-300">—</span>
       );
 
-    case 'quadrant':
-      return u.status === 'COMPLETED' && u.quadrant ? (
-        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-ohe-blue/10 text-ohe-blue font-semibold text-sm">
-          {u.quadrant}
-        </span>
-      ) : (
-        <span className="text-sm text-ohe-slate-300">—</span>
-      );
+   
 
     case 'completedAt':
       return u.completedAt ? (

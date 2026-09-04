@@ -36,7 +36,6 @@ export type ColumnKey =
   | 'deadline'
   | 'level'
   | 'score'
-  | 'quadrant'
   | 'completedAt'
   | 'actions';
 
@@ -64,7 +63,6 @@ export const USER_TABLE_COLUMNS: ColumnConfig[] = [
   { key: 'deadline',    label: 'Deadline',        visibility: 'active-context', sortable: true },
   { key: 'level',       label: 'Niveau',          visibility: 'completed-context' },
   { key: 'score',       label: 'Score',           visibility: 'completed-context', sortable: true },
-  { key: 'quadrant',    label: 'Cadran',          visibility: 'completed-context', align: 'center' },
   { key: 'completedAt', label: 'Terminé le',      visibility: 'completed-context', sortable: true },
   { key: 'actions',     label: 'Actions',         visibility: 'always', align: 'right' },
 ];
