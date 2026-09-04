@@ -18,17 +18,22 @@ function bloсScore(correctCount: number): number {
 
 /**
  * Convertit le score global procédural (/6) en niveau adapté.
- *   0    – 2.5 → A   (élémentaire)
- *   2.5  – 3.5 → B1  (intermédiaire)
- *   3.5  – 4.5 → B2  (avancé)
- *   4.5  – 6   → C   (expert)
+ * Barème en vigueur depuis septembre 2025 :
+ *   0    – 2.5 → A   (élémentaire,   0-42 %)
+ *   2.5  – 4.1 → B1  (intermédiaire, 43-69 %)
+ *   4.1  – 5.1 → B2  (avancé,        70-84 %)
+ *   5.1  – 6   → C   (expert,        85-100 %)
+ *
+ * Note : les tests passés avant cette date conservent le niveau
+ * stocké en base (calculé selon l'ancien barème).
  */
 function scoreToLevel(scoreTotal: number): Level {
   if (scoreTotal < 2.5) return Level.A;
-  if (scoreTotal < 3.5) return Level.B1;
+  if (scoreTotal < 4.1) return Level.B1;
   if (scoreTotal < 5.1) return Level.B2;
   return Level.C;
 }
+
 
 /**
  * Détermine le quadrant de la matrice 2×2 :
