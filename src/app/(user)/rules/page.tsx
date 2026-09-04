@@ -66,25 +66,27 @@ export default async function RulesPage() {
             Vos premières intuitions sont souvent les meilleures.
           </p>
 
-          <div className="mt-7 lg:mt-8 flex items-center gap-6 flex-wrap">
-            <Link href="/test">
-              <PrimaryButton>J&apos;ai compris, je démarre</PrimaryButton>
-            </Link>
-            <Link
-              href="/welcome"
-              className="text-sm text-ohe-muted hover:text-ohe-ink transition-colors underline underline-offset-4"
-            >
-              Revenir à l&apos;accueil
-            </Link>
-          </div>
+          <div className="mt-7 lg:mt-8">
+  <Link href="/test">
+    <PrimaryButton>J&apos;ai compris, je démarre</PrimaryButton>
+  </Link>
+</div>
+
         </div>
 
         {/* Byline */}
-        <div className="shrink-0 pt-5 border-t border-ohe-line">
-          <div className="ohe-caption text-ohe-muted">
-            OHé Diagnostic
-          </div>
-        </div>
+        <div className="shrink-0 pt-5 border-t border-ohe-line flex items-center justify-between gap-3.5">
+  <Link
+    href="/welcome"
+    className="text-sm text-ohe-muted hover:text-ohe-ink transition-colors"
+  >
+    ← Revenir à l&apos;accueil
+  </Link>
+  <div className="ohe-caption text-ohe-muted">
+    OHé Diagnostic
+  </div>
+</div>
+
       </div>
 
       {/* Colonne droite : panneau tint avec les 3 règles */}
