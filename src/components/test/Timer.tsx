@@ -29,8 +29,18 @@ export default function Timer({ duration, onExpire, resetKey }: TimerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timeLeft]);
 
-  const size = 110;
-  const radius = 50;
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 640);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  const size = isMobile ? 80 : 110;
+  const radius = isMobile ? 36 : 50;
+
 
 
   const circumference = 2 * Math.PI * radius;
@@ -78,11 +88,13 @@ export default function Timer({ duration, onExpire, resetKey }: TimerProps) {
           className="transition-all duration-1000 ease-linear"
         />
       </svg>
-                  <span
-        className={`relative font-serif italic text-[44px] tabular-nums ${textColor}`}
-      >
-        {timeLeft}
-      </span>
+                 <span
+  className={`relative font-serif italic tabular-nums ${textColor}`}
+  style={{ fontSize: isMobile ? 32 : 44 }}
+>
+  {timeLeft}
+</span>
+
     </div>
   );
 }

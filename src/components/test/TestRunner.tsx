@@ -236,32 +236,38 @@ const completedRef = useRef(false);
   return (
     <main className="h-screen bg-ohe-bg text-ohe-ink flex flex-col overflow-hidden">
             {/* Header */}
-      <header className="px-6 sm:px-10 lg:px-14 pt-4 pb-3 grid grid-cols-3 items-center gap-4 border-b border-ohe-line shrink-0">
-        {/* Gauche : Logo */}
-        <div className="flex justify-start">
-          <Logo size={40} withLabel />
-        </div>
+      <header className="px-4 sm:px-10 lg:px-14 pt-3 sm:pt-4 pb-3 grid grid-cols-3 items-center gap-2 sm:gap-4 border-b border-ohe-line shrink-0">
+  {/* Gauche : Logo (icône seule sur mobile, avec label sur sm+) */}
+  <div className="flex justify-start min-w-0">
+    <span className="sm:hidden">
+      <Logo size={32} />
+    </span>
+    <span className="hidden sm:inline-flex">
+      <Logo size={40} withLabel />
+    </span>
+  </div>
 
-        {/* Centre : Timer proéminent */}
-        <div className="flex justify-center">
-          <Timer
-            duration={question.timeLimit}
-            resetKey={question.id}
-            onExpire={() => submitAnswer(selectedIndex)}
-          />
-        </div>
+  {/* Centre : Timer proéminent */}
+  <div className="flex justify-center">
+    <Timer
+      duration={question.timeLimit}
+      resetKey={question.id}
+      onExpire={() => submitAnswer(selectedIndex)}
+    />
+  </div>
 
-        {/* Droite : Compteur de questions */}
-        <div className="flex justify-end">
-          <div className="flex flex-col items-end leading-tight">
-            <span className="ohe-caption text-ohe-muted">Question</span>
-            <span className="font-serif italic text-ohe-accent text-[22px] leading-none mt-1">
-              {String(currentIndex + 1).padStart(2, '0')}
-              <span className="text-ohe-muted text-[14px]"> / {totalQuestions}</span>
-            </span>
-          </div>
-        </div>
-      </header>
+  {/* Droite : Compteur de questions */}
+  <div className="flex justify-end min-w-0">
+    <div className="flex flex-col items-end leading-tight">
+      <span className="ohe-caption text-ohe-muted text-[11px] sm:text-xs">Question</span>
+      <span className="font-serif italic text-ohe-accent text-[18px] sm:text-[22px] leading-none mt-1 whitespace-nowrap">
+        {String(currentIndex + 1).padStart(2, '0')}
+        <span className="text-ohe-muted text-[12px] sm:text-[14px]"> / {totalQuestions}</span>
+      </span>
+    </div>
+  </div>
+</header>
+
 
 
       {/* Progress bar fine */}
